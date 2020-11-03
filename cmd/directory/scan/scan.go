@@ -32,7 +32,7 @@ func init() {
 	Cmd.PersistentFlags().StringVar(&apiKey, "apiKey", "", "tmdb api key")
 	Cmd.PersistentFlags().BoolVarP(&appendMode, "append", "a", false, "append mode")
 	Cmd.PersistentFlags().BoolVarP(&interactive, "interactive", "i", false, "interactive mode")
-	Cmd.PersistentFlags().BoolVarP(&noAPI, "no-api", "n", false, "no api call")
+	Cmd.PersistentFlags().BoolVarP(&noAPI, "no-api", "n", false, "no api call (not recommended)")
 	Cmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "skip confirmation")
 }
 

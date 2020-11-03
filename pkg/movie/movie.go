@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"path"
 	"sort"
 	"time"
 
@@ -17,19 +18,34 @@ var NoResults = errors.New("no results")
 const releaseDateLayout = "2006-01-02"
 
 type Movie struct {
-	ID          int64
-	Title       string
-	ReleaseDate time.Time
-	Language    string
+	ID           int64  `json:"id"`
+	Title        string `json:"title"`
+	Year         int    `json:"year"`
+	Path         string `json:"path`
+	IsDir        bool   `json:"isDir"`
+	Language     string `json:"language"`
+	OriginalName string `json:"originalName"`
 }
 
 // Path computes the ideal path for a movie given its title and year.
-func Path(title string, year int) string {
-	if year > 0 {
-		return fmt.Sprintf("%s (%d)", title, year)
+func (m *Movie) ComputePath() bool {
+	p := m.path()
+
+	if m.IsDir {
+		m.Path = p
+	} else {
+		m.Path = path.Join(p, m.OriginalName)
 	}
 
-	return title
+	return m.Path != m.OriginalName
+}
+
+func (m *Movie) path() string {
+	if m.Year > 0 {
+		return fmt.Sprintf("%s (%d)", m.Title, m.Year)
+	}
+
+	return m.Title
 }
 
 // Best return the first movie from the results.
@@ -47,10 +63,10 @@ func Best(searchMovies *gotmdb.SearchMovies) (*Movie, error) {
 	}
 
 	m := &Movie{
-		ID:          r.ID,
-		Title:       r.Title,
-		ReleaseDate: releaseDate,
-		Language:    r.OriginalLanguage,
+		ID:       r.ID,
+		Title:    r.Title,
+		Year:     releaseDate.Year(),
+		Language: r.OriginalLanguage,
 	}
 
 	return m, nil
@@ -109,10 +125,10 @@ func BestByYear(searchMovies *gotmdb.SearchMovies, year int) (*Movie, error) {
 	}
 
 	m := &Movie{
-		ID:          r.ID,
-		Title:       r.Title,
-		ReleaseDate: releaseDate,
-		Language:    r.OriginalLanguage,
+		ID:       r.ID,
+		Title:    r.Title,
+		Year:     releaseDate.Year(),
+		Language: r.OriginalLanguage,
 	}
 
 	return m, nil

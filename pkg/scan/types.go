@@ -3,6 +3,7 @@ package scan
 import (
 	"fmt"
 
+	"github.com/TheoBrigitte/evansky/pkg/movie"
 	"github.com/TheoBrigitte/evansky/pkg/tmdb"
 )
 
@@ -24,14 +25,14 @@ type Result struct {
 }
 
 type Results struct {
-	Total   int               `json:"total"`
-	Found   int               `json:"found"`
-	Results map[string]Result `json:"results"`
+	Total   int                    `json:"total"`
+	Found   int                    `json:"found"`
+	Results map[string]movie.Movie `json:"results"`
 }
 
 func NewResults() *Results {
 	r := &Results{}
-	r.Results = make(map[string]Result)
+	r.Results = make(map[string]movie.Movie)
 
 	return r
 }

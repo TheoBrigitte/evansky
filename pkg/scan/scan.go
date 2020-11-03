@@ -4,12 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
 	"strconv"
 
 	log "github.com/sirupsen/logrus"
-
-	gotmdb "github.com/cyruzin/golang-tmdb"
 
 	"github.com/TheoBrigitte/evansky/pkg/movie"
 	"github.com/TheoBrigitte/evansky/pkg/parser"
@@ -55,66 +52,74 @@ func (s *Scanner) Scan(files []os.FileInfo, interactive bool, current *Results) 
 				return nil, err
 			}
 
-			var title string
-			var year int
-			var id int64
-			var language string
-			if !s.noAPI {
-				var movies *gotmdb.SearchMovies
-				log.Debugf("search title=%s year=%s\n", info.Title, strconv.Itoa(info.Year))
-				movies, err = s.client.GetMovies(info.Title, strconv.Itoa(info.Year))
-				if err != nil {
-					return nil, err
-				}
+			m := &movie.Movie{
+				Title:        info.Title,
+				Year:         info.Year,
+				Language:     info.Language,
+				IsDir:        f.IsDir(),
+				OriginalName: f.Name(),
+			}
 
-				var m *movie.Movie
-				m, err = movie.Best(movies)
-				if errors.Is(err, movie.NoResults) {
-					log.Debugf("search hit NoResults error, trying without exact year.\n")
-					movies, err = s.client.GetMovies(info.Title, "")
-					if err != nil {
+			if !s.noAPI {
+				var m2 *movie.Movie
+				m2, err = s.searchMovie(*m)
+				if err != nil {
+					if errors.Is(err, movie.NoResults) {
+						fmt.Printf("scan: %s => (%v)\n", f.Name(), err)
+					} else {
 						return nil, err
 					}
-
-					m, err = movie.BestByYear(movies, info.Year)
-				}
-				if err == nil {
-					title = m.Title
-					year = m.ReleaseDate.Year()
-					language = m.Language
-					id = m.ID
-				}
-			} else {
-				title = info.Title
-				year = info.Year
-				language = info.Language
-			}
-			if err != nil {
-				//return err
-				fmt.Printf("scan: %s => (%v)\n", f.Name(), err)
-			} else {
-				fmt.Printf("scan: %s => (%s, %d, %d)\n", f.Name(), title, year, id)
-
-				var newPath string
-				if f.IsDir() {
-					newPath = movie.Path(title, year)
 				} else {
-					newPath = path.Join(movie.Path(title, year), f.Name())
+					m.ID = m2.ID
+					m.Title = m2.Title
+					m.Year = m2.Year
+					m.Language = m2.Language
 				}
+			}
 
-				if newPath != f.Name() {
-					results.Results[f.Name()] = Result{
-						ID:       id,
-						Language: language,
-						Path:     newPath,
-						IsDir:    f.IsDir(),
-					}
+			if err == nil {
+				fmt.Printf("scan: %s => (%s, %d, %d)\n", f.Name(), m.Title, m.Year, m.ID)
+
+				if m.ComputePath() {
+					results.Results[m.OriginalName] = *m
 				}
 			}
 		}
 	}
+
 	results.Found = len(results.Results)
 	log.Debugf("scanned files, found %d result(s)\n", results.Found)
 
 	return results, nil
+}
+
+func (s *Scanner) searchMovie(search movie.Movie) (*movie.Movie, error) {
+	// Search movie with title and year.
+	log.Debugf("search title=%s year=%s\n", search.Title, strconv.Itoa(search.Year))
+	movies, err := s.client.GetMovies(search.Title, strconv.Itoa(search.Year))
+	if err != nil {
+		return nil, err
+	}
+
+	m1, err := movie.Best(movies)
+	if errors.Is(err, movie.NoResults) {
+		// Search movie with title only, and match year after.
+		log.Debugf("search hit NoResults error, trying without exact year.\n")
+		movies, err = s.client.GetMovies(search.Title, "")
+		if err != nil {
+			return nil, err
+		}
+
+		m2, err := movie.BestByYear(movies, search.Year)
+		if err != nil {
+			return nil, err
+		}
+
+		return m2, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return m1, nil
 }
