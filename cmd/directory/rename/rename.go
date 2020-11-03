@@ -21,10 +21,12 @@ var (
 		Args:  cobra.ExactValidArgs(1),
 	}
 
-	force bool
+	dryRun bool
+	force  bool
 )
 
 func init() {
+	Cmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "n", false, "do not change anything")
 	Cmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "skip confirmation")
 }
 
@@ -91,7 +93,11 @@ func runner(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	fmt.Println("> renaming")
+	fmt.Printf("> renaming")
+	if dryRun {
+		fmt.Printf(" (dry run)")
+	}
+	fmt.Println("")
 
 	for name, r := range results.Results {
 		source := path.Join(args[0], name)
@@ -101,9 +107,11 @@ func runner(cmd *cobra.Command, args []string) error {
 			if !quiet {
 				fmt.Printf("create directory %#q\n", path.Dir(destination))
 			}
-			err = os.MkdirAll(path.Dir(destination), 0755)
-			if err != nil {
-				return err
+			if !dryRun {
+				err = os.MkdirAll(path.Dir(destination), 0755)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -118,19 +126,31 @@ func runner(cmd *cobra.Command, args []string) error {
 		if !quiet {
 			fmt.Printf("rename %#q -> %#q\n", source, destination)
 		}
-		err = os.Rename(source, destination)
+		if !dryRun {
+			err = os.Rename(source, destination)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	fmt.Printf("> renamed %d file(s)", len(results.Results))
+	if dryRun {
+		fmt.Printf(" (dry run)")
+	}
+	fmt.Println("")
+
+	if !dryRun {
+		err = c.Clean()
 		if err != nil {
 			return err
 		}
 	}
-
-	fmt.Printf("> renamed %d file(s)\n", len(results.Results))
-
-	err = c.Clean()
-	if err != nil {
-		return err
+	fmt.Printf("> cleaned cache %s", c.Dir())
+	if dryRun {
+		fmt.Printf(" (dry run)")
 	}
-	fmt.Printf("> cleaned cache %s\n", c.Dir())
+	fmt.Println("")
 
 	return nil
 }
