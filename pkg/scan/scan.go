@@ -64,11 +64,10 @@ func (s *Scanner) Scan(files []os.FileInfo, interactive bool, current *Results) 
 				var m2 *movie.Movie
 				m2, err = s.searchMovie(*m)
 				if err != nil {
-					if errors.Is(err, movie.NoResults) {
-						fmt.Printf("scan: %s => (%v)\n", f.Name(), err)
-					} else {
+					if !errors.Is(err, movie.NoResults) {
 						return nil, err
 					}
+					m.Error = err.Error()
 				} else {
 					m.ID = m2.ID
 					m.Title = m2.Title

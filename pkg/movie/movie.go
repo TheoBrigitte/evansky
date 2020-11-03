@@ -25,6 +25,7 @@ type Movie struct {
 	IsDir        bool   `json:"isDir"`
 	Language     string `json:"language"`
 	OriginalName string `json:"originalName"`
+	Error        string `json:"error,omitempty"`
 }
 
 // Path computes the ideal path for a movie given its title and year.
