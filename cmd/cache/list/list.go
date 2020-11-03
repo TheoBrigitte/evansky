@@ -12,8 +12,7 @@ import (
 var (
 	Cmd = &cobra.Command{
 		Use:   "list",
-		Short: "list directory content",
-		Long:  `List content of given directory and return list sorted by name.`,
+		Short: "list cache entries",
 		RunE:  runner,
 	}
 )

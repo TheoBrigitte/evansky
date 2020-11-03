@@ -14,7 +14,6 @@ var (
 	Cmd = &cobra.Command{
 		Use:   "clean",
 		Short: "clean cache",
-		Long:  `Clean cache directories.`,
 		RunE:  runner,
 	}
 
