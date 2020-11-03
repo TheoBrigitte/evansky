@@ -69,10 +69,23 @@ func (r *Results) Print(output io.Writer, verbose bool) {
 		}
 
 		fmt.Fprintln(w, "\t\t")
-		fmt.Fprintf(w, "failed\terror\t\n")
-		fmt.Fprintf(w, "------\t-----\t\n")
+		fmt.Fprintf(w, "failed\terror\t")
+		if verbose {
+			fmt.Fprintf(w, "title\tyear\t")
+		}
+		fmt.Fprintln(w, "")
+
+		fmt.Fprintf(w, "------\t-----\t")
+		if verbose {
+			fmt.Fprintf(w, "-----\t----\t")
+		}
+		fmt.Fprintln(w, "")
 		for name, r := range r.Failed {
-			fmt.Fprintf(w, "%s\t%v\t\n", name, r.Error)
+			fmt.Fprintf(w, "%s\t%s\t", name, r.Error)
+			if verbose {
+				fmt.Fprintf(w, "%s\t%d\t", r.Title, r.Year)
+			}
+			fmt.Fprintln(w, "")
 		}
 		w.Flush()
 	} else {
