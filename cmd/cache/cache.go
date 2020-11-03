@@ -8,6 +8,7 @@ import (
 
 	"github.com/TheoBrigitte/evansky/cmd/cache/clean"
 	"github.com/TheoBrigitte/evansky/cmd/cache/list"
+	"github.com/TheoBrigitte/evansky/cmd/cache/status"
 )
 
 // Cmd represents the list command
@@ -27,6 +28,7 @@ func Execute() {
 }
 
 func init() {
-	Cmd.AddCommand(list.Cmd)
 	Cmd.AddCommand(clean.Cmd)
+	Cmd.AddCommand(list.Cmd)
+	Cmd.AddCommand(status.Cmd)
 }
