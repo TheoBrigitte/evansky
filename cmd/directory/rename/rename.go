@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"text/tabwriter"
 
 	"github.com/TheoBrigitte/evansky/pkg/cache"
 	"github.com/TheoBrigitte/evansky/pkg/input"
@@ -77,14 +76,7 @@ func runner(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		if ok {
-			w := tabwriter.NewWriter(os.Stdout, 0, 0, 7, ' ', tabwriter.AlignRight)
-			fmt.Fprintln(w, "original\tnew\t")
-			fmt.Fprintln(w, "--------\t---\t")
-			for name, r := range results.Results {
-				fmt.Fprintf(w, "%s\t%s\t\n", name, r.Path)
-			}
-			w.Flush()
-			fmt.Println("")
+			results.Print(os.Stdout, false)
 		}
 
 		fmt.Printf("> about to rename %d file(s) in %s. proceed ? [y/N] ", results.Found, args[0])

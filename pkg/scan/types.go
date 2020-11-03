@@ -2,6 +2,8 @@ package scan
 
 import (
 	"fmt"
+	"io"
+	"text/tabwriter"
 
 	"github.com/TheoBrigitte/evansky/pkg/movie"
 	"github.com/TheoBrigitte/evansky/pkg/tmdb"
@@ -39,4 +41,43 @@ func (r *Results) IsComplete() bool {
 
 func (r *Results) CompletePercentage() string {
 	return fmt.Sprintf("%d%%", r.Found*100.0/r.Total)
+}
+
+func (r *Results) Print(output io.Writer, verbose bool) {
+	if len(r.Results) > 0 || len(r.Failed) > 0 {
+		w := tabwriter.NewWriter(output, 0, 0, 7, ' ', tabwriter.AlignRight)
+
+		fmt.Fprintf(w, "original\tnew\t")
+		if verbose {
+			fmt.Fprintf(w, "id\tisDir\t")
+		}
+		fmt.Fprintln(w, "")
+
+		fmt.Fprintf(w, "--------\t---\t")
+		if verbose {
+			fmt.Fprintf(w, "--\t-----\t")
+		}
+		fmt.Fprintln(w, "")
+
+		for name, r := range r.Results {
+			fmt.Fprintf(w, "%s\t%s\t", name, r.Path)
+			if verbose {
+				fmt.Fprintf(w, "%d\t%t\t", r.ID, r.IsDir)
+			}
+
+			fmt.Fprintln(w, "")
+		}
+
+		fmt.Fprintln(w, "\t\t")
+		fmt.Fprintf(w, "failed\terror\t\n")
+		fmt.Fprintf(w, "------\t-----\t\n")
+		for name, r := range r.Failed {
+			fmt.Fprintf(w, "%s\t%v\t\n", name, r.Error)
+		}
+		w.Flush()
+	} else {
+		fmt.Fprintln(output, "no results")
+	}
+
+	fmt.Fprintf(output, "%d/%d result(s)  %d failure(s)  %s complete\n", r.Found, r.Total, r.Failures, r.CompletePercentage())
 }
