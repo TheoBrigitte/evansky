@@ -1,12 +1,12 @@
 # evansky: Media Renamer
 
-CLI tool used to organize/rename media files, in order to be correctly detected by media server (e.g. jellyfin, emby, kodi).
+CLI tool used to organize/rename media files, in order to be correctly detected by media server (e.g. [jellyfin](https://jellyfin.org/), [emby](https://emby.media/), [kodi](https://kodi.tv/)).
 
-It does so by parsing each directory/file name using [middelink](https://github.com/middelink/go-parse-torrent-name)'s parser and match result against [TheMovieDatabase search API](https://developers.themoviedb.org/3/search/search-movies).
+It does so by parsing each directory/file name using [middelink](https://github.com/middelink/go-parse-torrent-name)'s parser and match result against [TheMovieDatabase API](https://developers.themoviedb.org/3/search/search-movies).
 
 `evansky` does cache scan results in order to guarantee that the directory/file being renamed are the one which where scanned. When changes occurs, directory need to be re-scanned.
 
-`evansky` follow naming convention as per the [Jellyfin documentation](https://jellyfin.org/docs/general/server/media/movies.html) on naming.
+`evansky` follow naming convention as per the [Jellyfin documentation](https://jellyfin.org/docs/general/server/media/movies.html).
 
 ## Requirement
 
