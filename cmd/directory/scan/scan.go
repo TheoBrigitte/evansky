@@ -106,7 +106,7 @@ func runner(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s %d file(s), found %d result(s)\n", verb, results.Total, results.Found)
+	fmt.Printf("%s %d file(s), found %d result(s), %d failure(s)\n", verb, results.Total, results.Found, results.Failures)
 
 	return nil
 }

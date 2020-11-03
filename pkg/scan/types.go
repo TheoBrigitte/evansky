@@ -17,22 +17,18 @@ type Config struct {
 	NoAPI  bool
 }
 
-type Result struct {
-	Path     string `json:"path"`
-	ID       int64  `json:"id"`
-	Language string `json:"language"`
-	IsDir    bool   `json:"isDir"`
-}
-
 type Results struct {
-	Total   int                    `json:"total"`
-	Found   int                    `json:"found"`
-	Results map[string]movie.Movie `json:"results"`
+	Total    int                    `json:"total"`
+	Found    int                    `json:"found"`
+	Failures int                    `json:"failures"`
+	Results  map[string]movie.Movie `json:"results"`
+	Failed   map[string]movie.Movie `json:"failed"`
 }
 
 func NewResults() *Results {
 	r := &Results{}
 	r.Results = make(map[string]movie.Movie)
+	r.Failed = make(map[string]movie.Movie)
 
 	return r
 }

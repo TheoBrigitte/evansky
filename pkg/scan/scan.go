@@ -82,11 +82,16 @@ func (s *Scanner) Scan(files []os.FileInfo, interactive bool, current *Results) 
 				if m.ComputePath() {
 					results.Results[m.OriginalName] = *m
 				}
+			} else {
+
+				results.Failed[m.OriginalName] = *m
+				fmt.Printf("scan: %s => (%v)\n", f.Name(), err)
 			}
 		}
 	}
 
 	results.Found = len(results.Results)
+	results.Failures = len(results.Failed)
 	log.Debugf("scanned files, found %d result(s)\n", results.Found)
 
 	return results, nil
