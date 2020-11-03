@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/TheoBrigitte/evansky/cmd/cache"
+	"github.com/TheoBrigitte/evansky/cmd/completion"
 	"github.com/TheoBrigitte/evansky/cmd/directory"
 )
 
@@ -30,5 +31,6 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(cache.Cmd)
+	rootCmd.AddCommand(completion.Cmd)
 	rootCmd.AddCommand(directory.Cmd)
 }
