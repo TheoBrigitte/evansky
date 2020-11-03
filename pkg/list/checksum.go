@@ -1,12 +1,12 @@
 package list
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"os"
 )
 
 func Sum(list []os.FileInfo) ([]byte, error) {
-	h := md5.New()
+	h := sha256.New()
 
 	for i, f := range list {
 		_, err := h.Write([]byte(f.Name()))

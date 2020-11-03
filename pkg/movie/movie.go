@@ -21,7 +21,7 @@ type Movie struct {
 	ID           int64  `json:"id"`
 	Title        string `json:"title"`
 	Year         int    `json:"year"`
-	Path         string `json:"path`
+	Path         string `json:"path"`
 	IsDir        bool   `json:"isDir"`
 	Language     string `json:"language"`
 	OriginalName string `json:"originalName"`

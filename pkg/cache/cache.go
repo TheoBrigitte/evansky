@@ -79,9 +79,9 @@ func New(dir string) (*Cache, error) {
 
 // Status check cache status.
 // e.g. filename=1234/5678
-//      DoNotExist: /cache/path/1234/fileschecksum.md5 missing
-//      Changed:    /cache/path/1234/fileschecksum.md5 content != checksum
-//      UpToDate:   /cache/path/1234/fileschecksum.md5 content == checksum
+//      DoNotExist: /cache/path/1234/fileschecksum missing
+//      Changed:    /cache/path/1234/fileschecksum content != checksum
+//      UpToDate:   /cache/path/1234/fileschecksum content == checksum
 func (c *Cache) Status(checksum string) (status Status, err error) {
 	defer func() {
 		log.Debugf("cache status=%s\n", status)

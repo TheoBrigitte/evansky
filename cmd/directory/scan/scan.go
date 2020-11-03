@@ -16,7 +16,7 @@ var (
 	Cmd = &cobra.Command{
 		Use:   "scan",
 		Short: "scan directory contents",
-		Long:  `List content of directory, cache md5 checksum and modification to be made.`,
+		Long:  `List content of directory, cache checksum and modification to be made.`,
 		RunE:  runner,
 		Args:  cobra.ExactValidArgs(1),
 	}

@@ -1,7 +1,7 @@
 package list
 
 import (
-	"crypto/md5"
+	"crypto/sha256"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -15,14 +15,14 @@ func New(path string) (*Lister, error) {
 		return nil, err
 	}
 
-	pathChecksum := fmt.Sprintf("%x", md5.Sum([]byte(absolutePath)))
+	pathChecksum := fmt.Sprintf("%x", sha256.Sum256([]byte(absolutePath)))
 
 	l := &Lister{
 		path:         absolutePath,
 		pathChecksum: pathChecksum,
 	}
 
-	log.Debugf("lister for %s (md5: %s)\n", l.path, l.pathChecksum)
+	log.Debugf("lister for %s (sha256: %s)\n", l.path, l.pathChecksum)
 
 	return l, nil
 }
@@ -49,7 +49,7 @@ func (l *Lister) List() (*Result, error) {
 		PathChecksum:  l.pathChecksum,
 	}
 
-	log.Debugf("listed %d file(s) (md5: %s)\n", lr.Files, lr.FilesChecksum)
+	log.Debugf("listed %d file(s) (sha256: %s)\n", lr.Files, lr.FilesChecksum)
 
 	return lr, nil
 }
