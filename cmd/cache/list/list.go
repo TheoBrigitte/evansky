@@ -16,15 +16,14 @@ var (
 		Long:  `List content of given directory and return list sorted by name.`,
 		RunE:  runner,
 	}
-
-	verbose bool
 )
 
-func init() {
-	Cmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "show more informations")
-}
-
 func runner(cmd *cobra.Command, args []string) error {
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		return err
+	}
+
 	caches, err := cache.NewMultiple()
 	if err != nil {
 		return err

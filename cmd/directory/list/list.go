@@ -17,6 +17,11 @@ var Cmd = &cobra.Command{
 }
 
 func runner(cmd *cobra.Command, args []string) error {
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		return err
+	}
+
 	caches, err := cache.NewMultiple()
 	if err != nil {
 		return err
@@ -34,7 +39,10 @@ func runner(cmd *cobra.Command, args []string) error {
 				return err
 			}
 
-			fmt.Printf("%s results=%d/%d filesChecksum=%s pathChecksum=%s", list.Path, scan.Found, scan.Total, list.FilesChecksum, list.PathChecksum)
+			fmt.Printf("%s results=%d/%d", list.Path, scan.Found, scan.Total)
+			if verbose {
+				fmt.Printf(" filesChecksum=%s pathChecksum=%s", list.FilesChecksum, list.PathChecksum)
+			}
 
 			fmt.Println("")
 		}
