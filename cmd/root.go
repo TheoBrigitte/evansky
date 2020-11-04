@@ -16,7 +16,7 @@ var rootCmd = &cobra.Command{
 	Use:               "evansky",
 	Short:             "media renamer",
 	Long:              `Rename media files in order to be detected by media server like Jellyfin.`,
-	PersistentPreRunE: persistentPreRunE,
+	PersistentPreRunE: logLevel,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

@@ -14,8 +14,9 @@ import (
 
 // Cmd represents the list command
 var Cmd = &cobra.Command{
-	Use:   "directory",
-	Short: "manage directories",
+	Use:               "directory",
+	Short:             "manage directories",
+	PersistentPreRunE: preventNonSensitiveFS,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
