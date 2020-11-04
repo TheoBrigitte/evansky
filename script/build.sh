@@ -1,4 +1,6 @@
 #!/bin/bash
+#
+# This script requires OS, ARCH, and VERSION environement variables to be set.
 
 set -eu
 

@@ -1,4 +1,6 @@
 #!/bin/bash
+#
+# This script requires OS, ARCH, and VERSION environement variables to be set.
 
 set -eu
 
@@ -8,12 +10,13 @@ BUILD_DIR="$SCRIPT_DIR/../build"
 
 docker build -t builder -f $SCRIPT_DIR/../Dockerfile.builder $SCRIPT_DIR
 docker run --rm \
-	-v $SCRIPT_DIR/..:/evansky \
-	-w /evansky/script \
+	-v $SCRIPT_DIR/..:/app \
+	-w /app \
 	-e OS=$OS \
 	-e ARCH=$ARCH \
 	-e VERSION=$VERSION \
 	-e GOCACHE=/tmp/go-build/ \
 	--user $(id -u):$(id -g) \
+	-ti \
 	builder \
-	./build.sh
+	./script/build.sh
