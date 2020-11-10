@@ -8,6 +8,8 @@ SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 
 PROJECT_NAME=evansky
 OS=linux
+VERSION_NO_PREFIX=${VERSION#v}
+
 PKG_NAME=${PROJECT_NAME}-${VERSION}-${OS}-${ARCH}
 
 PROJECT_ROOT=$SCRIPT_DIR/..
@@ -66,7 +68,7 @@ chmod 644 ${DPKG_DIR}/usr/share/doc/${PROJECT_NAME}/copyright
 mkdir -p "${DPKG_DIR}/DEBIAN"
 cat > "${DPKG_DIR}/DEBIAN/control" <<EOF
 Package: ${PROJECT_NAME}
-Version: ${VERSION}
+Version: ${VERSION_NO_PREFIX}
 Section: utils
 Priority: optional
 Maintainer: Théo Brigitte
@@ -77,4 +79,4 @@ Description: evansky media renamer
  Rename media files in order to be detected by media server like Jellyfin.
 EOF
 
-fakeroot dpkg-deb --build ${DPKG_DIR} ${BUILD_DIR}/${PROJECT_NAME}_${VERSION}_${ARCH}.deb
+fakeroot dpkg-deb --build ${DPKG_DIR} ${BUILD_DIR}/${PROJECT_NAME}_${VERSION_NO_PREFIX}_${ARCH}.deb

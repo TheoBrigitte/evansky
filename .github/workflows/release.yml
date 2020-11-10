@@ -1,0 +1,51 @@
+on:
+  push:
+    tags:
+    - 'v*'
+
+name: release
+
+jobs:
+  build:
+    name: release
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          - { os: linux, arch: amd64 }
+          - { os: darwin, arch: amd64 }
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Set output
+        id: vars
+        run: |
+          echo ::set-output name=tag::${GITHUB_REF#refs/*/}
+          echo ::set-output name=tag-nov::${GITHUB_REF#refs/*/v}
+      - name: Pre build
+        run: |
+          script/build_builder.sh
+      - name: Build source archive
+        run: |
+          OS=${{ matrix.job.os }} ARCH=${{ matrix.job.arch }} VERSION=${{ steps.vars.outputs.tag }} script/release_using_docker.sh ./script/build.sh
+      - name: Build debian package
+        if: ${{ matrix.job.os == 'linux' }}
+        run: |
+          OS=${{ matrix.job.os }} ARCH=${{ matrix.job.arch }} VERSION=${{ steps.vars.outputs.tag }} script/release_using_docker.sh ./script/package_debian.sh
+      - name: Publish archives
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            ./build/evansky-${{ steps.vars.outputs.tag }}-${{ matrix.job.os }}-${{ matrix.job.arch }}.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish packages
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/') && matrix.job.os == 'linux'
+        with:
+          files: |
+            ./build/evansky_${{ steps.vars.outputs.tag-nov }}_${{ matrix.job.arch }}.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

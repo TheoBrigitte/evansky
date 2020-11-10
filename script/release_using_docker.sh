@@ -1,21 +1,21 @@
 #!/bin/bash
 #
-# This script requires VERSION environement variables to be set.
+# This script requires OS, ARCH, and VERSION environement variables to be set.
 
 set -eu
 
 SCRIPT_DIR="$( cd "$( dirname "$0" )" && pwd )"
 
-echo $SCRIPT_DIR
+test -t 1 && USE_TTY="-it" || USE_TTY=""
 
-echo "> preparing build image ... builder"
-docker build -t builder -f $SCRIPT_DIR/../Dockerfile.builder $SCRIPT_DIR
 docker run --rm \
 	-v $SCRIPT_DIR/..:/app \
 	-w /app \
+	-e OS=$OS \
+	-e ARCH=$ARCH \
 	-e VERSION=$VERSION \
 	-e GOCACHE=/tmp/go-build/ \
 	--user $(id -u):$(id -g) \
-	-ti \
+	${USE_TTY} \
 	builder \
-	./script/release.sh
+	$@
