@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/TheoBrigitte/evansky/cmd/cache"
+	"github.com/TheoBrigitte/evansky/cmd/common"
 	"github.com/TheoBrigitte/evansky/cmd/completion"
 	"github.com/TheoBrigitte/evansky/cmd/directory"
 )
@@ -16,7 +17,7 @@ var rootCmd = &cobra.Command{
 	Use:               "evansky",
 	Short:             "media renamer",
 	Long:              `Rename media files in order to be detected by media server like Jellyfin.`,
-	PersistentPreRunE: logLevel,
+	PersistentPreRunE: common.LogLevel,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/TheoBrigitte/evansky/cmd/common"
 	"github.com/TheoBrigitte/evansky/cmd/directory/list"
 	"github.com/TheoBrigitte/evansky/cmd/directory/rename"
 	"github.com/TheoBrigitte/evansky/cmd/directory/scan"
@@ -16,7 +17,7 @@ import (
 var Cmd = &cobra.Command{
 	Use:               "directory",
 	Short:             "manage directories",
-	PersistentPreRunE: preventNonSensitiveFS,
+	PersistentPreRunE: common.MultiRuns(common.LogLevel, preventNonSensitiveFS),
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
