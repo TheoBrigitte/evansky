@@ -29,7 +29,7 @@ var (
 )
 
 func init() {
-	Cmd.PersistentFlags().StringVar(&apiKey, "apiKey", "", "tmdb api key")
+	Cmd.PersistentFlags().StringVar(&apiKey, "api-key", "", "tmdb api key")
 	Cmd.PersistentFlags().BoolVarP(&appendMode, "append", "a", false, "append mode")
 	Cmd.PersistentFlags().BoolVarP(&interactive, "interactive", "i", false, "interactive mode")
 	Cmd.PersistentFlags().BoolVarP(&noAPI, "no-api", "n", false, "no api call (not recommended)")
@@ -41,6 +41,7 @@ func runner(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("directory missing")
 	}
 
+	// Initializations
 	fmt.Printf("scanning %s\n", args[0])
 	cfg := scan.Config{
 		APIKey: apiKey,
@@ -61,11 +62,13 @@ func runner(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	// List files
 	result, err := lister.List()
 	if err != nil {
 		return err
 	}
 
+	// Check cache status
 	status, err := c.Status(lister.FilesChecksum())
 	if err != nil {
 		return err
@@ -90,6 +93,7 @@ func runner(cmd *cobra.Command, args []string) error {
 			return err
 		}
 
+		// Scan files
 		results, err := scanner.Scan(lister.Files(), interactive, current)
 		if err != nil {
 			return err

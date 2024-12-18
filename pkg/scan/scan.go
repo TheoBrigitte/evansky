@@ -51,22 +51,27 @@ func (s *Scanner) Scan(files []os.FileInfo, interactive bool, current *Results) 
 				return nil, err
 			}
 
-			var m *movie.Movie
+			m := &movie.Multi{
+				Title:        info.Title,
+				Year:         info.Year,
+				Language:     info.Language,
+				IsDir:        f.IsDir(),
+				OriginalName: f.Name(),
+			}
 			if !s.noAPI {
-				m, err = s.searchMovie(info, f)
+				var result *movie.Multi
+				result, err = s.searchMulti(info, f)
 				if err != nil {
-					if !errors.Is(err, movie.NoResults) {
+					if !errors.Is(err, movie.NoResults) && !errors.Is(err, movie.UnsupportedMediaType) {
 						return nil, err
 					}
 					m.Error = err.Error()
-				}
-			} else {
-				m = &movie.Movie{
-					Title:        info.Title,
-					Year:         info.Year,
-					Language:     info.Language,
-					IsDir:        f.IsDir(),
-					OriginalName: f.Name(),
+				} else {
+					m.ID = result.ID
+					m.Title = result.Title
+					m.Year = result.Year
+					m.Language = result.Language
+					m.MediaType = result.MediaType
 				}
 			}
 

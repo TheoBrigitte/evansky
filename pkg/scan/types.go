@@ -23,14 +23,14 @@ type Results struct {
 	Total    int                    `json:"total"`
 	Found    int                    `json:"found"`
 	Failures int                    `json:"failures"`
-	Results  map[string]movie.Movie `json:"results"`
-	Failed   map[string]movie.Movie `json:"failed"`
+	Results  map[string]movie.Multi `json:"results"`
+	Failed   map[string]movie.Multi `json:"failed"`
 }
 
 func NewResults() *Results {
 	r := &Results{}
-	r.Results = make(map[string]movie.Movie)
-	r.Failed = make(map[string]movie.Movie)
+	r.Results = make(map[string]movie.Multi)
+	r.Failed = make(map[string]movie.Multi)
 
 	return r
 }

@@ -32,3 +32,18 @@ func (c *Client) GetMovies(query, year string) (*gotmdb.SearchMovies, error) {
 
 	return movies, nil
 }
+
+// GetMovies search for movies using query and year (if provided).
+// see: https://developers.themoviedb.org/3/search/search-movies
+func (c *Client) GetMulti(query, year string) (*gotmdb.SearchMulti, error) {
+	var additionalQuery = make(map[string]string)
+	if year != "" {
+		additionalQuery["year"] = year
+	}
+	multi, err := c.client.GetSearchMulti(query, additionalQuery)
+	if err != nil {
+		return nil, err
+	}
+
+	return multi, nil
+}

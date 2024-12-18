@@ -1,7 +1,6 @@
 package movie
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"path"
@@ -9,18 +8,10 @@ import (
 	"time"
 
 	gotmdb "github.com/cyruzin/golang-tmdb"
+	log "github.com/sirupsen/logrus"
 )
 
-var (
-	NoResults            = errors.New("no results")
-	UnsupportedMediaType = errors.New("unsupported media type")
-)
-
-// release_date field format.
-// see: https://developers.themoviedb.org/3/search/search-movies
-const releaseDateLayout = "2006-01-02"
-
-type Movie struct {
+type Multi struct {
 	ID           int64  `json:"id"`
 	Title        string `json:"title"`
 	Year         int    `json:"year"`
@@ -28,11 +19,12 @@ type Movie struct {
 	IsDir        bool   `json:"isDir"`
 	Language     string `json:"language"`
 	OriginalName string `json:"originalName"`
+	MediaType    string `json:"mediaType"`
 	Error        string `json:"error,omitempty"`
 }
 
 // Path computes the ideal path for a movie given its title and year.
-func (m *Movie) ComputePath() bool {
+func (m *Multi) ComputePath() bool {
 	p := m.path()
 
 	if m.IsDir {
@@ -44,7 +36,7 @@ func (m *Movie) ComputePath() bool {
 	return m.Path != m.OriginalName
 }
 
-func (m *Movie) path() string {
+func (m *Multi) path() string {
 	if m.Year > 0 {
 		return fmt.Sprintf("%s (%d)", m.Title, m.Year)
 	}
@@ -54,23 +46,37 @@ func (m *Movie) path() string {
 
 // Best return the first movie from the results.
 // First one is considered best because searchMovies.Results response from the api is ordered with best matches first.
-func Best(searchMovies *gotmdb.SearchMovies) (*Movie, error) {
+func BestMulti(searchMovies *gotmdb.SearchMulti) (*Multi, error) {
 	if len(searchMovies.Results) <= 0 {
 		return nil, NoResults
 	}
 
 	r := searchMovies.Results[0]
+	log.Debugf("best: %#v\n", r)
 
-	releaseDate, err := time.Parse(releaseDateLayout, r.ReleaseDate)
-	if err != nil {
-		return nil, err
+	date := ""
+	if r.ReleaseDate != "" {
+		date = r.ReleaseDate
+	}
+	if r.FirstAirDate != "" {
+		date = r.FirstAirDate
 	}
 
-	m := &Movie{
-		ID:       r.ID,
-		Title:    r.Title,
-		Year:     releaseDate.Year(),
-		Language: r.OriginalLanguage,
+	var releaseDate time.Time
+	var err error
+	if date != "" {
+		releaseDate, err = time.Parse(releaseDateLayout, date)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	m := &Multi{
+		ID:        r.ID,
+		Title:     r.Title,
+		Year:      releaseDate.Year(),
+		Language:  r.OriginalLanguage,
+		MediaType: r.MediaType,
 	}
 
 	return m, nil
@@ -85,7 +91,7 @@ func Best(searchMovies *gotmdb.SearchMovies) (*Movie, error) {
 //
 // both delta and index are increased by 1 to avoid an entry being considered best because it is first (index=0) or matches exact year (delta=0, but index=499)
 // searchMovies.Results entries are ordered with best matches first (0 is good, 499 is bad).
-func BestByYear(searchMovies *gotmdb.SearchMovies, year int) (*Movie, error) {
+func BestByYearMulti(searchMovies *gotmdb.SearchMulti, year int) (*Multi, error) {
 	if len(searchMovies.Results) <= 0 {
 		return nil, NoResults
 	}
@@ -97,7 +103,18 @@ func BestByYear(searchMovies *gotmdb.SearchMovies, year int) (*Movie, error) {
 	}
 	var t []tmp
 	for i := range searchMovies.Results {
-		date, err := time.Parse(releaseDateLayout, searchMovies.Results[i].ReleaseDate)
+		dateInput := ""
+		if searchMovies.Results[i].ReleaseDate != "" {
+			dateInput = searchMovies.Results[i].ReleaseDate
+		}
+		if searchMovies.Results[i].FirstAirDate != "" {
+			dateInput = searchMovies.Results[i].FirstAirDate
+		}
+		if dateInput == "" {
+			continue
+		}
+
+		date, err := time.Parse(releaseDateLayout, dateInput)
 		if err != nil {
 			return nil, err
 		}
@@ -123,16 +140,18 @@ func BestByYear(searchMovies *gotmdb.SearchMovies, year int) (*Movie, error) {
 
 	// pick best score (first entry).
 	r := searchMovies.Results[t[0].index-1]
+	log.Debugf("bestByYear: %#v\n", r)
 	releaseDate, err := time.Parse(releaseDateLayout, r.ReleaseDate)
 	if err != nil {
 		return nil, err
 	}
 
-	m := &Movie{
-		ID:       r.ID,
-		Title:    r.Title,
-		Year:     releaseDate.Year(),
-		Language: r.OriginalLanguage,
+	m := &Multi{
+		ID:        r.ID,
+		Title:     r.Title,
+		Year:      releaseDate.Year(),
+		Language:  r.OriginalLanguage,
+		MediaType: r.MediaType,
 	}
 
 	return m, nil
