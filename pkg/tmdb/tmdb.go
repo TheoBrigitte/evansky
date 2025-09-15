@@ -2,11 +2,31 @@ package tmdb
 
 import (
 	gotmdb "github.com/cyruzin/golang-tmdb"
+	"github.com/spf13/pflag"
+
+	"github.com/TheoBrigitte/evansky/pkg/provider"
 )
 
+var (
+	//Cmd.PersistentFlags().StringVar(&apiKey, "api-key", "", "tmdb api key")
+	apiKey = ""
+
+	flags = pflag.NewFlagSet("tmdb", pflag.ExitOnError)
+
+	Provider = provider.Provider{
+		Name:  "tmdb",
+		New:   New,
+		Flags: flags,
+	}
+)
+
+func init() {
+	flags.StringVar(&apiKey, "tmdb-api-key", "", "tmdb api key")
+}
+
 // New return a new tmdb client.
-func New(config Config) (*Client, error) {
-	tmdbClient, err := gotmdb.Init(config.APIKey)
+func New(flags *pflag.FlagSet) (provider.Interface, error) {
+	tmdbClient, err := gotmdb.Init(apiKey)
 	if err != nil {
 		return nil, err
 	}
