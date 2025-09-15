@@ -93,20 +93,31 @@ func Parse(filename string) (*TorrentInfo, error) {
 	if startIndex > endIndex {
 		startIndex = 0
 	}
+
+	// Take the first filename part before a '(' as title
 	parts := strings.Split(filename[startIndex:endIndex], "(")
 	if len(parts) < 1 {
 		return tor, nil
 	}
 	raw := parts[0]
-	cleanName = raw
-	if strings.HasPrefix(cleanName, "- ") {
-		cleanName = raw[2:]
-	}
+
+	// Remove leading and trailing spaces and dashes
+	cleanName = strings.Trim(raw, " -")
+
 	if strings.ContainsRune(cleanName, '.') && !strings.ContainsRune(cleanName, ' ') {
-		cleanName = strings.Replace(cleanName, ".", " ", -1)
+		// If there are dots but no spaces, replace dots with spaces
+		// examples:
+		//          rename "Doctor.Who." to "Doctor Who"
+		//   do not rename "Marvels Agents of S.H.I.E.L.D."
+		cleanName = strings.ReplaceAll(cleanName, ".", " ")
 	}
-	cleanName = strings.Replace(cleanName, "_", " ", -1)
+
+	// Replace underscores with spaces
+	cleanName = strings.ReplaceAll(cleanName, "_", " ")
+
 	//cleanName = re.sub('([\[\(_]|- )$', '', cleanName).strip()
+
+	// Set title
 	setField(tor, "title", raw, strings.TrimSpace(cleanName))
 
 	return tor, nil
