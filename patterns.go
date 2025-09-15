@@ -21,7 +21,10 @@ var patterns = []struct {
 	{"episode", false, reflect.Int, regexp.MustCompile(`(?i)([x]([0-9]{2})(?:[^0-9]|$))`)},
 	{"episode", false, reflect.Int, regexp.MustCompile(`(?i)([e]([0-9]{2,})(?:[^0-9]|$))`)},
 	{"episode", false, reflect.Int, regexp.MustCompile(`(-\s+([0-9]{1,})(?:[^0-9]|$))`)},
+	// Years from 1900 to 2099
 	{"year", true, reflect.Int, regexp.MustCompile(`\b(((?:19[0-9]|20[0-9])[0-9]))\b`)},
+	// Year ranges and take the first year, e.g. 1989-2016 => 1989
+	{"year", true, reflect.Int, regexp.MustCompile(`\b(((?:19[0-9]|20[0-9])[0-9])-(?:19[0-9]|20[0-9])[0-9])\b`)},
 
 	{"resolution", false, reflect.String, regexp.MustCompile(`\b(([0-9]{3,4}p))\b`)},
 	{"quality", false, reflect.String, regexp.MustCompile(`(?i)\b(((?:PPV\.)?[HP]DTV|(?:HD)?CAM|B[DR]Rip|(?:HD-?)?TS|(?:PPV )?WEB-?DL(?: DVDRip)?|HDRip|DVDRip|DVDRIP|CamRip|W[EB]BRip|BluRay|DvDScr|telesync))\b`)},
