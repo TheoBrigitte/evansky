@@ -5,6 +5,6 @@
   "resolution": "1080p",
   "quality": "WEBDL",
   "group": "1080p Proper.mkv",
-  "container": "mkv",
-  "proper": true
+  "proper": true,
+  "container": "mkv"
 }
