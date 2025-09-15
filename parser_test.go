@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 var updateGoldenFiles = flag.Bool("update", false, "update golden files in testdata/")
@@ -134,7 +136,8 @@ func TestParser(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(*tor, want) {
-				t.Fatalf("test %v: wrong result for %q\nwant:\n  %v\ngot:\n  %v", i, fname, want, *tor)
+				diff := cmp.Diff(tor, &want)
+				t.Fatalf("test %v: wrong result for %q\ndiff (-exected, +generated):\n%s", i, fname, diff)
 			}
 		})
 	}
