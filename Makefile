@@ -1,0 +1,187 @@
+# This Makefile provides targets for building, linting and testing.
+
+# Variables
+PROJECT_NAME := evansky
+BUILD_DIR := build
+DOCKER_FILE := docker/Dockerfile
+
+# Build informations
+VERSION := $(shell git describe --always --long --dirty || date)
+GOARCH ?= $(shell go env GOARCH)
+GOOS ?= $(shell go env GOOS)
+BUILD_USER ?= $(shell whoami)@$(shell hostname)
+
+# Default target
+.DEFAULT_GOAL := build
+
+OSES = linux darwin windows
+ARCHS = amd64 arm64
+EXT = $(if $(filter $(GOOS),windows),.exe,)
+
+# Colors for output
+CYAN := \033[36m
+GREEN := \033[32m
+YELLOW := \033[33m
+RED := \033[31m
+RESET := \033[0m
+
+##@ Building
+
+define build
+	@printf "$(CYAN)Building Go binary...$(RESET)\n"
+	mkdir -p $(BUILD_DIR)
+	GOOS=$(1) GOARCH=$(2) CGO_ENABLED=0 go build -v -o ./$(BUILD_DIR)/$(PROJECT_NAME).$(1)-$(2)$(EXT) -ldflags=" \
+	-s -w \
+	-X github.com/prometheus/common/version.Version=$(VERSION) \
+	-X github.com/prometheus/common/version.Revision=$(shell git rev-parse HEAD) \
+	-X github.com/prometheus/common/version.Branch=$(shell git rev-parse --abbrev-ref HEAD) \
+	-X github.com/prometheus/common/version.BuildUser=$(BUILD_USER) \
+	-X github.com/prometheus/common/version.BuildDate=$(shell date --utc +%FT%T)" \
+	.
+	@printf "$(GREEN)Build completed. Output is in $(BUILD_DIR)/$(PROJECT_NAME).$(1)-$(2)$(RESET)\n"
+endef
+
+.PHONY: build
+build: ## Build the Go binary
+	$(call build,$(GOOS),$(GOARCH))
+
+.PHONY: build-%
+build-%: GOOS=$(word 2,$(subst -, ,$@))
+build-%: GOARCH=$(word 3,$(subst -, ,$@))
+build-%: ## Build the Go binary for a specific OS and architecture, e.g. build-linux-amd64
+	@if [ -z "$(GOOS)" ] || [ -z "$(GOARCH)" ]; then \
+		printf "$(RED)Error: invalid target, must be build-os-arch, e.g. build-linux-amd64$(RESET)\n"; \
+		exit 1; \
+	fi
+	$(call build,$(GOOS),$(GOARCH))
+
+.PHONY: build-all
+build-all: $(foreach os,$(OSES),$(foreach arch,$(ARCHS),build-$(os)-$(arch))) ## Build the Go binary for all supported OSes and architectures
+
+.PHONY: install
+install: build ## Install the binary to ~/.local/bin
+	@printf "$(CYAN)Installing binary to ~/.local/bin...$(RESET)\n"
+	@mkdir -p ~/.local/bin
+	cp $(BUILD_DIR)/$(PROJECT_NAME).$(GOOS)-$(GOARCH) ~/.local/bin/$(PROJECT_NAME)
+	chmod +x ~/.local/bin/$(PROJECT_NAME)
+	@printf "$(GREEN)Binary installed to ~/.local/bin/$(PROJECT_NAME)$(RESET)\n"
+
+.PHONY: docker
+docker: build ## Build the Docker image
+	@printf "$(CYAN)Building Docker image...$(RESET)\n"
+	docker build -f $(DOCKER_FILE) -t $(PROJECT_NAME) .
+	@printf "$(GREEN)Docker image built successfully$(RESET)\n"
+
+.PHONY: docker
+docker-all: build-all ## Build the Docker image for all architectures
+	@printf "$(CYAN)Building Docker image...$(RESET)\n"
+	docker buildx build --platform linux/amd64,linux/arm64 -f $(DOCKER_FILE) -t $(PROJECT_NAME) .
+	@printf "$(GREEN)Docker image built successfully$(RESET)\n"
+
+.PHONY: clean
+clean: ## Clean build artifacts and Docker images
+	@printf "$(CYAN)Cleaning build artifacts...$(RESET)\n"
+	rm -rf $(BUILD_DIR)
+	@printf "$(CYAN)Removing Docker images...$(RESET)\n"
+	@docker rmi -f $(PROJECT_NAME) 2>/dev/null || true
+	@printf "$(GREEN)Cleanup completed$(RESET)\n"
+
+##@ Testing
+
+.PHONY: test
+test: ## Run the complete test suite, optionally filtered by run_pattern or bench_pattern
+	@printf "$(CYAN)Running tests...$(RESET)\n"
+	go test -v -race -run="$(run_pattern)" -bench="$(bench_pattern)" -benchmem ./...
+	@printf "$(GREEN)Tests completed successfully$(RESET)\n"
+
+##@ Code Quality
+
+.PHONY: lint
+lint: ## Run golangci-lint for comprehensive code analysis (requires CGO environment)
+	@printf "$(CYAN)Running golangci-lint...$(RESET)\n"
+	golangci-lint run -E gosec -E goconst --timeout 10m --max-same-issues 0 --max-issues-per-linter 0 ./...
+	@printf "$(GREEN)Linting completed$(RESET)\n"
+
+.PHONY: vet
+vet: ## Run go vet for static analysis
+	@printf "$(CYAN)Running go vet...$(RESET)\n"
+	go vet ./...
+	@printf "$(GREEN)Static analysis completed$(RESET)\n"
+
+.PHONY: fmt
+fmt: ## Check code formatting
+	@printf "$(CYAN)Checking code formatting...$(RESET)\n"
+	gofmt -d .
+
+.PHONY: lint-all
+lint-all: fmt vet lint ## Run all linting checks
+
+##@ Security
+
+nancy: ## Run Nancy vulnerability scan
+	@printf "$(CYAN)Running nancy vulnerability scan...$(RESET)\n"
+	sh -c "go list -json -m all | nancy sleuth"
+	@printf "$(GREEN)Nancy scan completed$(RESET)\n"
+
+.PHONY: security
+security: nancy ## Run all security scans
+
+##@ NPM Publishing
+
+NPM_DIR := npm
+NPM_PACKAGES_DIR := $(NPM_DIR)/packages
+
+.PHONY: npm-packages
+npm-packages: build-all ## Create all npm packages for binaries
+	@printf "$(CYAN)Creating npm packages...$(RESET)\n"
+	rm -rf $(NPM_PACKAGES_DIR)
+	mkdir -p $(NPM_PACKAGES_DIR)
+	$(foreach plat,$(PLATFORMS),$(call create_npm_package,$(plat)))
+	$(foreach os,$(OSES),$(foreach arch,$(ARCHS),$(call create_npm_package,$(os)-$(arch))))
+	@printf "$(GREEN)NPM packages created in $(NPM_PACKAGES_DIR)$(RESET)\n"
+
+# GOOS and GOARCH are separated by '-'
+define create_npm_package
+	$(eval GOOS := $(word 1,$(subst -, ,$1)))
+	$(eval GOARCH := $(word 2,$(subst -, ,$1)))
+	$(eval NPM_CPU := $(if $(filter $(GOARCH),amd64),x64,$(GOARCH)))
+	$(eval NPM_OS := $(if $(filter $(GOOS),windows),win32,$(GOOS)))
+	$(eval PKG_NAME := $(PROJECT_NAME)-$(NPM_OS)-$(NPM_CPU))
+	$(eval PKG_DIR := $(NPM_PACKAGES_DIR)/$(PKG_NAME))
+	$(eval BIN_NAME := $(PROJECT_NAME)$(EXT))
+	@printf "  Creating package for $(GOOS)/$(GOARCH) -> $(NPM_OS)/$(NPM_CPU)\n"
+	mkdir -p $(PKG_DIR)/bin
+	cp $(BUILD_DIR)/$(PROJECT_NAME).$(GOOS)-$(GOARCH)$(EXT) $(PKG_DIR)/bin/$(BIN_NAME)
+	chmod +x $(PKG_DIR)/bin/$(BIN_NAME)
+	@echo "$$package_json" > $(PKG_DIR)/package.json
+endef
+
+define package_json
+{
+  "name": "$(PKG_NAME)",
+  "version": "$(VERSION)",
+  "description": "Binary for $(PROJECT_NAME) on $(NPM_OS) $(NPM_CPU)",
+  "os": ["$(NPM_OS)"],
+  "cpu": ["$(NPM_CPU)"]
+}
+endef
+export package_json
+
+##@ Help
+
+.PHONY: help
+help: ## Display this help message
+	@awk 'BEGIN {FS = ":.*##"; printf "\n$(CYAN)Usage:$(RESET)\n  make $(YELLOW)<target>$(RESET)\n"} /^[a-zA-Z_0-9-]+.*?##/ { printf "  $(YELLOW)%-20s$(RESET) %s\n", $$1, $$2 } /^##@/ { printf "\n$(CYAN)%s$(RESET)\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@printf "\n"
+	@printf "$(CYAN)Examples:$(RESET)\n"
+	@printf "  make install                        # Install to ~/.local/bin\n"
+	@printf "  make build                          # Build the binary\n"
+	@printf "  make test                           # Run all tests\n"
+	@printf "  make test run_pattern=Parse         # Run tests matching 'Parse'\n"
+	@printf "  make lint-all                       # Run all code quality checks\n"
+	@printf "  make security                       # Run all security scans\n"
+	@printf "  make clean                          # Clean all artifacts\n"
+
+help-build: ## Display help for supported build targets
+	@printf "$(CYAN)Build targets:$(RESET)\n"
+	@$(foreach os,$(OSES),$(foreach arch,$(ARCHS),printf "  make build-%s-%s\n" $(os) $(arch);))
