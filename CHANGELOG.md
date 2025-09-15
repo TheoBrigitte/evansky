@@ -1,6 +1,17 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/)
+and this project adheres to [Semantic Versioning](https://semver.org/).
+
 ## [Unreleased]
 
+## [0.1.0] - 2025-09-15
+
 ### Added
+
 - First version which can rename movie directories and files.
 
-[Unreleased]: https://github.com/TheoBrigitte/evansky/compare/master...HEAD
+[Unreleased]: https://github.com/TheoBrigitte/evansky/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/TheoBrigitte/evansky/releases/tag/v0.1.0
