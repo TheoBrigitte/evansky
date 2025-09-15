@@ -136,7 +136,7 @@ func TestParser(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(*tor, want) {
-				diff := cmp.Diff(tor, &want)
+				diff := cmp.Diff(&want, tor)
 				t.Fatalf("test %v: wrong result for %q\ndiff (-exected, +generated):\n%s", i, fname, diff)
 			}
 		})
