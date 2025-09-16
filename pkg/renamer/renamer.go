@@ -12,12 +12,12 @@ type Renamer interface {
 }
 
 type renamer struct {
-	sources   []source.Interface
+	paths     []string
 	providers []provider.Interface
 }
 
-func New(sources []source.Interface, providers []provider.Interface) (Renamer, error) {
-	if len(sources) == 0 {
+func New(paths []string, providers []provider.Interface) (Renamer, error) {
+	if len(paths) == 0 {
 		return nil, fmt.Errorf("at least one source is required")
 	}
 	if len(providers) == 0 {
@@ -25,7 +25,7 @@ func New(sources []source.Interface, providers []provider.Interface) (Renamer, e
 	}
 
 	r := &renamer{
-		sources:   sources,
+		paths:     paths,
 		providers: providers,
 	}
 
@@ -33,6 +33,19 @@ func New(sources []source.Interface, providers []provider.Interface) (Renamer, e
 }
 
 func (r *renamer) Run(dryRun, force bool) error {
-	fmt.Println("rename is not implemented yet")
+	o := source.Options{}
+
+	for _, path := range r.paths {
+		s, err := source.NewSource(path, r.providers, o)
+		if err != nil {
+			return fmt.Errorf("failed to initialize path %s: %w", path, err)
+		}
+
+		err = s.Items()
+		if err != nil {
+			return fmt.Errorf("failed to get items for path %s: %w", path, err)
+		}
+	}
+
 	return nil
 }
