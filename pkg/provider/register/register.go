@@ -1,7 +1,6 @@
 package register
 
 import (
-	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -29,14 +28,22 @@ func init() {
 }
 
 func Initialize(cmd *cobra.Command) {
+	// get sorted list of registered provider names.
 	names := slices.Collect(maps.Keys(registeredProviders))
+	slices.Sort(names)
+
+	// add --provider flag
 	cmd.PersistentFlags().StringSliceVar(&chosenProviders, "provider", defaultProviders, "list of commad separated data providers, available: "+strings.Join(names, ","))
+
+	// add providers flags
 	cmd.PersistentFlags().AddFlagSet(flags)
 }
 
 // mustRegister register a new provider into the registeredProviders map.
 // It panics if a provider with the same name is already registered.
-func mustRegister(p provider.Provider) {
+func mustRegister(f provider.ProviderFunc) {
+	p := f()
+
 	if _, exists := registeredProviders[p.Name]; exists {
 		panic("provider already registered: " + p.Name)
 	}
@@ -63,26 +70,19 @@ func mustRegister(p provider.Provider) {
 
 func GetProviders() ([]provider.Interface, error) {
 	var providers []provider.Interface
-	var errs []error
 
 	for _, name := range chosenProviders {
 		newFunc, exists := registeredProviders[name]
 		if !exists {
-			errs = append(errs, fmt.Errorf("unknown provider: %s", name))
-			continue
+			return nil, fmt.Errorf("provider not registered: %s", name)
 		}
 
 		provider, err := newFunc(flags)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to initialize provider %s: %w", name, err))
-			continue
+			return nil, fmt.Errorf("failed to initialize %s provider: %w", name, err)
 		}
 
 		providers = append(providers, provider)
-	}
-
-	if len(errs) > 0 {
-		return nil, fmt.Errorf("failed to get providers:\n%v", errors.Join(errs...))
 	}
 
 	return providers, nil
