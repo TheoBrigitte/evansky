@@ -9,7 +9,14 @@ type Client struct {
 	client *gotmdb.Client
 }
 
-// Config contains configuration for tmdb Client.
-type Config struct {
-	APIKey string
+type response struct {
+	ID               int64
+	Title            string
+	Name             string
+	MediaType        string
+	OriginalLanguage string
+	OriginalName     string
+	OriginalTitle    string
+	ReleaseDate      string
+	FirstAirDate     string
 }

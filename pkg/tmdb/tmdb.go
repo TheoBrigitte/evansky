@@ -1,41 +1,68 @@
 package tmdb
 
 import (
+	"fmt"
+	"strconv"
+
 	gotmdb "github.com/cyruzin/golang-tmdb"
 	"github.com/spf13/pflag"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
 )
 
-var (
-	//Cmd.PersistentFlags().StringVar(&apiKey, "api-key", "", "tmdb api key")
-	apiKey = ""
-
-	flags = pflag.NewFlagSet("tmdb", pflag.ExitOnError)
-
-	Provider = provider.Provider{
-		Name:  "tmdb",
-		New:   New,
-		Flags: flags,
-	}
-)
-
-func init() {
-	flags.StringVar(&apiKey, "tmdb-api-key", "", "tmdb api key")
-}
-
 // New return a new tmdb client.
 func New(flags *pflag.FlagSet) (provider.Interface, error) {
+	// Validate api key early to catch error before Init.
+	if apiKey == "" {
+		return nil, fmt.Errorf("--%s is required", apiKeyFlag)
+	}
+
 	tmdbClient, err := gotmdb.Init(apiKey)
 	if err != nil {
 		return nil, err
 	}
+	tmdbClient.SetClientConfig(newClient(&clientOptions{
+		ttl: cacheTTL,
+	}))
 
 	c := &Client{
 		client: tmdbClient,
 	}
 
 	return c, nil
+}
+
+func (c *Client) Name() string {
+	return name
+}
+
+func (c *Client) Search(req provider.Request) ([]provider.Response, error) {
+	multi, err := c.GetMulti(req.Query, strconv.Itoa(req.Year))
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]provider.Response, 0, len(multi.Results))
+	for _, result := range multi.Results {
+		r := response{
+			ID:               result.ID,
+			Title:            result.Title,
+			Name:             result.Name,
+			MediaType:        result.MediaType,
+			OriginalLanguage: result.OriginalLanguage,
+			OriginalName:     result.OriginalName,
+			OriginalTitle:    result.OriginalTitle,
+			ReleaseDate:      result.ReleaseDate,
+			FirstAirDate:     result.FirstAirDate,
+		}
+		responses = append(responses, r)
+	}
+
+	if len(responses) == 0 {
+		return nil, fmt.Errorf("no result")
+	}
+
+	return responses, nil
 }
 
 // GetMovies search for movies using query and year (if provided).
