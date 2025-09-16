@@ -1,12 +1,11 @@
 package rename
 
 import (
-	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider/register"
 	"github.com/TheoBrigitte/evansky/pkg/renamer"
-	"github.com/TheoBrigitte/evansky/pkg/source"
 
 	"github.com/spf13/cobra"
 )
@@ -35,34 +34,17 @@ func runner(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("directory missing")
 	}
 
-	var sources []source.Interface
-	var errs []error
-	for _, path := range args {
-		source, err := source.New(path)
-		if err != nil {
-			// collect errors but try all paths
-			// in order to give the user a complete feedback
-			errs = append(errs, err)
-			continue
-		}
-		sources = append(sources, source)
-	}
-
-	if len(errs) > 0 {
-		return fmt.Errorf("failed to read path(s)\n%v", errors.Join(errs...))
-	}
-
 	providers, err := register.GetProviders()
 	if err != nil {
 		return err
 	}
 
-	r, err := renamer.New(sources, providers)
+	r, err := renamer.New(args, providers)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("renaming %d source(s)\n", len(sources))
-	fmt.Printf("using %d provider(s)\n", len(providers))
+	slog.Info("start", "sources", len(args), "provider", len(providers))
+
 	return r.Run(dryRun, force)
 }

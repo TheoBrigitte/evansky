@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"log/slog"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -12,11 +13,17 @@ import (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:               "evansky",
-	Short:             "media renamer",
-	Long:              `Rename media files in order to be detected by media server like Jellyfin.`,
-	PersistentPreRunE: common.LogLevel,
-	SilenceUsage:      true,
+	Use:           "evansky",
+	Short:         "media renamer",
+	Long:          `Rename media files in order to be detected by media server like Jellyfin.`,
+	SilenceUsage:  true,
+	SilenceErrors: true,
+}
+
+func init() {
+	rootCmd.AddCommand(completion.Cmd)
+	rootCmd.AddCommand(rename.Cmd)
+	common.Register(rootCmd)
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -24,11 +31,7 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
+		slog.Error(err.Error())
 		os.Exit(1)
 	}
-}
-
-func init() {
-	rootCmd.AddCommand(completion.Cmd)
-	rootCmd.AddCommand(rename.Cmd)
 }

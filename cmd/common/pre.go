@@ -1,19 +1,61 @@
 package common
 
 import (
-	log "github.com/sirupsen/logrus"
+	"fmt"
+	"log/slog"
+	"os"
+	"strings"
+
 	"github.com/spf13/cobra"
 )
 
+func Register(cmd *cobra.Command) {
+	cmd.PersistentFlags().StringP("log-level", "l", "info", fmt.Sprintf("set log level (%s)", allLogLevels()))
+	cmd.PersistentPreRunE = LogLevel
+}
+
 // LogLevel set the level of the logger.
 func LogLevel(cmd *cobra.Command, args []string) error {
-	level, err := log.ParseLevel(cmd.Flag("log-level").Value.String())
+	level, err := parseLogLevel(cmd.Flag("log-level").Value.String())
 	if err != nil {
 		return err
 	}
-	log.SetLevel(level)
+
+	// Set the default logger for the application.
+	loggerOptions := &slog.HandlerOptions{
+		// TODO: enable for debugging
+		//AddSource: true,
+		Level: level,
+	}
+	logger := slog.NewTextHandler(os.Stderr, loggerOptions)
+	slog.SetDefault(slog.New(logger))
 
 	return nil
+}
+
+var (
+	logLevels = map[string]slog.Level{
+		"debug": slog.LevelDebug,
+		"info":  slog.LevelInfo,
+		"warn":  slog.LevelWarn,
+		"error": slog.LevelError,
+	}
+)
+
+func allLogLevels() string {
+	levels := make([]string, 0, len(logLevels))
+	for level := range logLevels {
+		levels = append(levels, level)
+	}
+	return strings.Join(levels, ", ")
+}
+
+func parseLogLevel(logLevelStr string) (slog.Level, error) {
+	level, ok := logLevels[logLevelStr]
+	if !ok {
+		return -1, fmt.Errorf("invalid log level: %s", logLevelStr)
+	}
+	return level, nil
 }
 
 func MultiRuns(cmds ...func(*cobra.Command, []string) error) func(*cobra.Command, []string) error {
