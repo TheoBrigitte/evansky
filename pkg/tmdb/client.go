@@ -6,11 +6,40 @@ import (
 	"net/http"
 	"time"
 
+	gotmdb "github.com/cyruzin/golang-tmdb"
 	"github.com/gohugoio/hugo/cache/filecache"
 	"github.com/spf13/afero"
+	"github.com/spf13/pflag"
 
+	"github.com/TheoBrigitte/evansky/pkg/provider"
 	"github.com/TheoBrigitte/evansky/pkg/tmdb/httpcache"
 )
+
+// New return a new tmdb client.
+func New(flags *pflag.FlagSet) (provider.Interface, error) {
+	// Validate api key early to catch error before Init.
+	if apiKey == "" {
+		return nil, fmt.Errorf("--%s is required", apiKeyFlag)
+	}
+
+	tmdbClient, err := gotmdb.Init(apiKey)
+	if err != nil {
+		return nil, err
+	}
+	tmdbClient.SetClientConfig(newClient(&clientOptions{
+		ttl: cacheTTL,
+	}))
+
+	c := &Client{
+		client: tmdbClient,
+	}
+
+	return c, nil
+}
+
+func (c *Client) Name() string {
+	return name
+}
 
 type clientOptions struct {
 	ttl time.Duration

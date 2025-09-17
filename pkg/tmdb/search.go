@@ -4,42 +4,13 @@ import (
 	"fmt"
 	"strconv"
 
-	gotmdb "github.com/cyruzin/golang-tmdb"
-	"github.com/spf13/pflag"
-
 	"github.com/TheoBrigitte/evansky/pkg/provider"
 )
 
-// New return a new tmdb client.
-func New(flags *pflag.FlagSet) (provider.Interface, error) {
-	// Validate api key early to catch error before Init.
-	if apiKey == "" {
-		return nil, fmt.Errorf("--%s is required", apiKeyFlag)
-	}
-
-	tmdbClient, err := gotmdb.Init(apiKey)
-	if err != nil {
-		return nil, err
-	}
-	tmdbClient.SetClientConfig(newClient(&clientOptions{
-		ttl: cacheTTL,
-	}))
-
-	c := &Client{
-		client: tmdbClient,
-	}
-
-	return c, nil
-}
-
-func (c *Client) Name() string {
-	return name
-}
-
-func (c *Client) Search(req provider.Request, mediaType provider.MediaType) (responses []provider.Response, err error) {
+func (c *Client) Search(req provider.Request) (responses []provider.Response, err error) {
 	year := strconv.Itoa(req.Year)
 
-	switch mediaType {
+	switch req.MediaType {
 	case provider.MediaTypeMovie:
 		responses, err = c.searchMovies(req.Query, year)
 	case provider.MediaTypeTV:
@@ -103,14 +74,9 @@ func (c *Client) searchMovies(query, year string) ([]provider.Response, error) {
 
 	responses := make([]provider.Response, 0, len(movies.Results))
 	for _, result := range movies.Results {
-		r := response{
-			ID:               result.ID,
-			Title:            result.Title,
-			OriginalLanguage: result.OriginalLanguage,
-			OriginalTitle:    result.OriginalTitle,
-			ReleaseDate:      result.ReleaseDate,
-			VoteCount:        result.VoteCount,
-			VoteAverage:      result.VoteAverage,
+		r, err := newMovieResponse(result)
+		if err != nil {
+			return nil, err
 		}
 		responses = append(responses, r)
 	}
@@ -132,14 +98,9 @@ func (c *Client) searchTV(query, year string) ([]provider.Response, error) {
 
 	responses := make([]provider.Response, 0, len(tvshows.Results))
 	for _, result := range tvshows.Results {
-		r := response{
-			ID:               result.ID,
-			Name:             result.Name,
-			OriginalName:     result.OriginalName,
-			OriginalLanguage: result.OriginalLanguage,
-			FirstAirDate:     result.FirstAirDate,
-			VoteCount:        result.VoteCount,
-			VoteAverage:      result.VoteAverage,
+		r, err := newTVResponse(result)
+		if err != nil {
+			return nil, err
 		}
 		responses = append(responses, r)
 	}
@@ -156,21 +117,21 @@ func (c *Client) searchMulti(query, year string) ([]provider.Response, error) {
 	}
 
 	responses := make([]provider.Response, 0, len(multi.Results))
-	for _, result := range multi.Results {
-		r := response{
-			ID:               result.ID,
-			Title:            result.Title,
-			Name:             result.Name,
-			MediaType:        result.MediaType,
-			OriginalLanguage: result.OriginalLanguage,
-			OriginalName:     result.OriginalName,
-			OriginalTitle:    result.OriginalTitle,
-			ReleaseDate:      result.ReleaseDate,
-			FirstAirDate:     result.FirstAirDate,
-			Popularity:       result.Popularity,
-		}
-		responses = append(responses, r)
-	}
+	//for _, result := range multi.Results {
+	//	r := multiResponse{
+	//		ID:    result.ID,
+	//		Title: result.Title,
+	//		Name:  result.Name,
+	//		//MediaType:        result.MediaType,
+	//		OriginalLanguage: result.OriginalLanguage,
+	//		OriginalName:     result.OriginalName,
+	//		OriginalTitle:    result.OriginalTitle,
+	//		ReleaseDate:      result.ReleaseDate,
+	//		FirstAirDate:     result.FirstAirDate,
+	//		Popularity:       result.Popularity,
+	//	}
+	//	responses = append(responses, r)
+	//}
 
 	return responses, nil
 }
