@@ -4,6 +4,8 @@ import (
 	parse "github.com/middelink/go-parse-torrent-name"
 )
 
-func Parse(filename string) (*parse.TorrentInfo, error) {
+type Info = parse.TorrentInfo
+
+func Parse(filename string) (*Info, error) {
 	return parse.Parse(filename)
 }

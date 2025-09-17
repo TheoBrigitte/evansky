@@ -26,6 +26,12 @@ var (
 func init() {
 	Cmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "n", false, "do not change anything")
 	Cmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "skip confirmation")
+
+	// TODO: add flags for selecting providers
+	// add flag for:
+	// - recursive: scan directories recursively
+	// - include directories: include directories in the renaming process
+
 	register.Initialize(Cmd)
 }
 
