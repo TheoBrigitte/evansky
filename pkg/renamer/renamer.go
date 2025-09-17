@@ -41,11 +41,13 @@ func (r *renamer) Run(dryRun, force bool) error {
 			return fmt.Errorf("failed to initialize path %s: %w", path, err)
 		}
 
-		err = s.Items()
+		err = s.Process()
 		if err != nil {
 			return fmt.Errorf("failed to get items for path %s: %w", path, err)
 		}
 	}
+
+	// TODO: handle non destructive renaming, keeping other files (subtitles, etc)
 
 	return nil
 }
