@@ -64,6 +64,7 @@ func newClient(o *clientOptions) http.Client {
 		cachedFs := afero.NewCacheOnReadFs(baseFs, cacheFs, 0)
 
 		// create http cache
+		// TODO: cleanup cache directory
 		c := filecache.NewCache(cachedFs, o.ttl, "")
 
 		transport = &httpcache.Transport{

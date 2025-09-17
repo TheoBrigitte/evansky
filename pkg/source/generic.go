@@ -21,6 +21,7 @@ type generic struct {
 	nodes []Node
 
 	// TODO: add setting to prefer file name preference over parent directories when finding a match
+	// TODO: add settings to ignore n levels of directories (min-depth), and allow for max depth
 }
 
 func newGeneric(path string, providers []provider.Interface) (*generic, error) {
@@ -39,7 +40,7 @@ func (g *generic) Process() error {
 	}
 	dirInfo := fs.FileInfoToDirEntry(info)
 
-	nodes, err := g.walk(g.path, dirInfo, nil)
+	nodes, err := g.walk(g.path, dirInfo, nil, nil)
 	if err != nil {
 		return err
 	}
@@ -49,18 +50,23 @@ func (g *generic) Process() error {
 }
 
 // TODO: enrich parentReq with more info (like if it's a tv show or movie), then merge with current info as we walk down
-func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Response) ([]Node, error) {
+func (g *generic) walk(path string, entry fs.DirEntry, parentReq *provider.Request, parentResp provider.Response) ([]Node, error) {
 	// Parse current file or directory name.
 	info, err := parser.Parse(entry.Name())
 	if err != nil {
 		return nil, err
 	}
 
+	// TODO: if we have more information than the parent request, backtrack and re-query the providers with the new information. Year is most important.
+
 	// Query the providers with the parsed information.
-	req := provider.NewRequest(*info, parentResp)
-	resp, err := g.Find(req, g.mediaType)
+	req, err := provider.NewRequest(*info, parentReq, parentResp)
 	if err != nil {
-		slog.Debug("processing", "path", path, "type", g.mediaType, "parsed", info, "error", err)
+		return nil, err
+	}
+	resp, err := g.Find(*req, g.mediaType)
+	if err != nil {
+		slog.Error("processing", "path", path, "type", g.mediaType, "parsed", info, "error", err)
 		return nil, nil
 	}
 	slog.Debug("processing", "path", path, "type", g.mediaType, "parsed", info, "response", resp)
@@ -88,7 +94,8 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 	var nodes []Node
 	for _, nextEntry := range dirs {
 		nextPath := filepath.Join(path, nextEntry.Name())
-		nodes, err := g.walk(nextPath, nextEntry, resp)
+		// TODO: allow for non-recursive scan
+		nodes, err := g.walk(nextPath, nextEntry, req, resp)
 		if err != nil {
 			return nil, err
 		}
