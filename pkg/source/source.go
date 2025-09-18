@@ -11,7 +11,6 @@ type Source interface {
 }
 
 type Options struct {
-	MediaType provider.MediaType
 	Recursive bool
 	MinDepth  int
 	MaxDepth  int

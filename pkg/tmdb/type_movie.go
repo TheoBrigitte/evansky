@@ -9,7 +9,7 @@ import (
 )
 
 type movieResponse struct {
-	gotmdb.MovieResult
+	result gotmdb.MovieResult
 
 	releaseDate time.Time
 	mediaType   provider.MediaType
@@ -23,32 +23,28 @@ func newMovieResponse(result gotmdb.MovieResult) (*movieResponse, error) {
 	}
 
 	m := &movieResponse{
-		MovieResult: result,
+		result:      result,
 		releaseDate: releaseDate,
 		mediaType:   provider.MediaTypeMovie,
 	}
 
 	return m, nil
-	//	response: response{
-	//		ID:               m.ID,
-	//		Title:            m.Title,
-	//		OriginalTitle:    m.OriginalTitle,
-	//		OriginalLanguage: m.OriginalLanguage,
-	//		ReleaseDate:      m.ReleaseDate,
-	//		VoteCount:        m.VoteCount,
-	//		VoteAverage:      m.VoteAverage,
-	//		//Popularity:       m.Popularity,
-	//		MediaType: provider.MediaTypeMovie,
-	//	},
-	//}
 }
 
 func (r movieResponse) GetID() int {
-	return int(r.ID)
+	return int(r.result.ID)
 }
 
 func (r movieResponse) GetName() string {
-	return r.Title
+	return r.result.Title
+}
+
+func (r movieResponse) GetSeasonNumber() int {
+	return -1
+}
+
+func (r movieResponse) GetEpisodeNumber() int {
+	return -1
 }
 
 func (r movieResponse) GetDate() time.Time {
@@ -60,5 +56,5 @@ func (r movieResponse) GetMediaType() provider.MediaType {
 }
 
 func (r movieResponse) GetPopularity() int {
-	return computePopularity(r.Popularity, r.VoteAverage, r.VoteCount)
+	return computePopularity(r.result.Popularity, r.result.VoteAverage, r.result.VoteCount)
 }

@@ -7,7 +7,7 @@ import (
 // Interface is the interface that all providers must implement.
 type Interface interface {
 	Name() string
-	Search(Request) ([]Response, error)
+	Search(Request) (Response, error)
 }
 
 // NewFunc is a function that creates a new provider instance.

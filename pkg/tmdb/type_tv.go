@@ -9,7 +9,7 @@ import (
 )
 
 type tvResponse struct {
-	gotmdb.TVShowResult
+	result gotmdb.TVShowResult
 
 	firstAirDate time.Time
 	mediaType    provider.MediaType
@@ -23,31 +23,27 @@ func newTVResponse(result gotmdb.TVShowResult) (*tvResponse, error) {
 	}
 
 	t := &tvResponse{
-		TVShowResult: result,
+		result:       result,
 		firstAirDate: firstAirDate,
 		mediaType:    provider.MediaTypeTV,
 	}
 	return t, nil
-	//		response: response{
-	//			ID:               t.ID,
-	//			Name:             t.Name,
-	//			OriginalName:     t.OriginalName,
-	//			OriginalLanguage: t.OriginalLanguage,
-	//			FirstAirDate:     t.FirstAirDate,
-	//			VoteCount:        t.VoteCount,
-	//			VoteAverage:      t.VoteAverage,
-	//			//Popularity:       t.Popularity,
-	//			MediaType: provider.MediaTypeTV,
-	//		},
-	//	}
 }
 
 func (r tvResponse) GetID() int {
-	return int(r.ID)
+	return int(r.result.ID)
 }
 
 func (r tvResponse) GetName() string {
-	return r.Name
+	return r.result.Name
+}
+
+func (r tvResponse) GetSeasonNumber() int {
+	return -1
+}
+
+func (r tvResponse) GetEpisodeNumber() int {
+	return -1
 }
 
 func (r tvResponse) GetDate() time.Time {
@@ -59,5 +55,5 @@ func (r tvResponse) GetMediaType() provider.MediaType {
 }
 
 func (r tvResponse) GetPopularity() int {
-	return computePopularity(r.Popularity, r.VoteAverage, r.VoteCount)
+	return computePopularity(r.result.Popularity, r.result.VoteAverage, r.result.VoteCount)
 }

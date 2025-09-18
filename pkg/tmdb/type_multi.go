@@ -60,3 +60,11 @@ func computePopularity(popularity, voteAverage float32, voteCount int64) int {
 	}
 	return int(math.Round(float64(voteAverage) * math.Log(float64(voteCount))))
 }
+
+func (r multiResponse) GetSeasonNumber() int {
+	return -1
+}
+
+func (r multiResponse) GetEpisodeNumber() int {
+	return -1
+}

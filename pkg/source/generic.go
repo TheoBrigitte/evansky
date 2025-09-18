@@ -12,9 +12,8 @@ import (
 )
 
 type generic struct {
-	path      string
-	newPath   string
-	mediaType provider.MediaType
+	path    string
+	newPath string
 
 	providers []provider.Interface
 
@@ -64,17 +63,19 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentReq *provider.Reque
 	if err != nil {
 		return nil, err
 	}
-	resp, err := g.Find(*req, g.mediaType)
+
+	slog.Debug("processing", "info", info, "request", req, "path", path)
+	resp, err := g.Find(*req)
 	if err != nil {
-		slog.Error("processing", "path", path, "type", g.mediaType, "parsed", info, "error", err)
+		slog.Error("processed", "error", err, "path", path)
 		return nil, nil
 	}
-	slog.Debug("processing", "path", path, "type", g.mediaType, "parsed", info, "response", resp)
+	slog.Debug("processed", "response", resp, "path", path)
 
+	name := fmt.Sprintf("%s (%d)", resp.GetName(), resp.GetDate().Year())
 	if !entry.IsDir() {
 		// It's a file, create a single file source.
 		dir := filepath.Dir(path)
-		name := fmt.Sprintf("%s (%d)", resp.GetName(), resp.GetDate().Year())
 		n := Node{
 			PathOld: path,
 			PathNew: filepath.Join(dir, name),
@@ -82,6 +83,7 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentReq *provider.Reque
 		slog.Info("found", "old", n.PathOld, "new", n.PathNew)
 		return []Node{n}, nil
 	}
+	slog.Info("found", "old", path, "new", name)
 
 	dirs, err := os.ReadDir(path)
 	if err != nil {
@@ -153,15 +155,17 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentReq *provider.Reque
 //	return s
 //}
 
-func (g *generic) Find(req provider.Request, mediaType provider.MediaType) (provider.Response, error) {
+// Find queries the providers in order until one returns a valid response.
+// lang is the ISO 639-3 language code to use for the query.
+func (g *generic) Find(req provider.Request) (provider.Response, error) {
 	for _, p := range g.providers {
-		responses, err := p.Search(req)
+		resp, err := p.Search(req)
 		if err != nil {
 			slog.Debug("provider search error", "provider", p.Name(), "error", err)
 			continue
 		}
 
-		return responses[0], nil
+		return resp, nil
 	}
 
 	return nil, fmt.Errorf("no result")

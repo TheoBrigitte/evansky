@@ -10,8 +10,8 @@ import (
 // Request represents a search request to a provider.
 type Request struct {
 	Query    string
-	Language string
 	Year     int
+	Language string
 
 	// TODO: Maybe best to rely on presence of underlying struct to determine the request type?
 	MediaType MediaType
@@ -25,9 +25,9 @@ type RequestMovie struct {
 }
 
 type RequestTV struct {
-	ID        int
-	SeasonID  int
-	EpisodeID int
+	ID            int
+	SeasonNumber  int
+	EpisodeNumber int
 }
 
 // TODO: merge previous response and parsed information to create a more accurate request. Requests should be more accuracte as we walk down the directory tree.
@@ -73,9 +73,9 @@ func NewRequest(info parser.Info, req *Request, resp Response) (*Request, error)
 		}
 		r.MediaType = MediaTypeTV
 		r.TV = &RequestTV{
-			ID:        resp.GetID(),
-			SeasonID:  info.Season,
-			EpisodeID: info.Episode,
+			ID:            resp.GetID(),
+			SeasonNumber:  info.Season,
+			EpisodeNumber: info.Episode,
 		}
 		return r, nil
 	case MediaTypeTVSeason:
@@ -84,9 +84,9 @@ func NewRequest(info parser.Info, req *Request, resp Response) (*Request, error)
 		}
 		r.MediaType = MediaTypeTV
 		r.TV = &RequestTV{
-			ID:        req.TV.ID,
-			SeasonID:  resp.GetID(),
-			EpisodeID: info.Episode,
+			ID:            req.TV.ID,
+			SeasonNumber:  resp.GetSeasonNumber(),
+			EpisodeNumber: info.Episode,
 		}
 		return r, nil
 	case MediaTypeTVEpisode:
@@ -95,14 +95,18 @@ func NewRequest(info parser.Info, req *Request, resp Response) (*Request, error)
 		}
 		r.MediaType = MediaTypeTV
 		r.TV = &RequestTV{
-			ID:        req.TV.ID,
-			SeasonID:  req.TV.SeasonID,
-			EpisodeID: resp.GetID(),
+			ID:            req.TV.ID,
+			SeasonNumber:  req.TV.SeasonNumber,
+			EpisodeNumber: resp.GetEpisodeNumber(),
 		}
 		return r, nil
 	}
 
 	return r, nil
+}
+
+func (r Request) String() string {
+	return fmt.Sprintf("Request{Query: %q, Year: %d, Language: %q MediaType: %s, Movie: %+v, TV: %+v}", r.Query, r.Year, r.Language, r.MediaType, r.Movie, r.TV)
 }
 
 func oneOf(a MediaType, others ...MediaType) bool {
