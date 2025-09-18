@@ -6,6 +6,10 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
+
+	"github.com/abadojack/whatlanggo"
+	"github.com/pemistahl/lingua-go"
 
 	"github.com/TheoBrigitte/evansky/pkg/parser"
 	"github.com/TheoBrigitte/evansky/pkg/provider"
@@ -22,6 +26,19 @@ type generic struct {
 	// TODO: add setting to prefer file name preference over parent directories when finding a match
 	// TODO: add settings to ignore n levels of directories (min-depth), and allow for max depth
 }
+
+var (
+	languages = []lingua.Language{
+		lingua.English,
+		lingua.French,
+		lingua.German,
+		lingua.Spanish,
+	}
+
+	detector = lingua.NewLanguageDetectorBuilder().
+			FromLanguages(languages...).
+			Build()
+)
 
 func newGeneric(path string, providers []provider.Interface) (*generic, error) {
 	s := &generic{
@@ -63,6 +80,14 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentReq *provider.Reque
 	if err != nil {
 		return nil, err
 	}
+
+	//language, exists := detector.DetectLanguageOf(req.Query)
+	//if !exists {
+	//	language = lingua.English
+	//}
+	//req.Language = strings.ToLower(language.IsoCode639_1().String())
+	lang := whatlanggo.Detect(req.Query)
+	req.Language = strings.ToLower(lang.Lang.Iso6391())
 
 	slog.Debug("processing", "info", info, "request", req, "path", path)
 	resp, err := g.Find(*req)
