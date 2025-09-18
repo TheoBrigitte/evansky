@@ -39,6 +39,10 @@ func (r movieResponse) GetName() string {
 	return r.result.Title
 }
 
+func (r movieResponse) GetShowID() int {
+	return -1
+}
+
 func (r movieResponse) GetSeasonNumber() int {
 	return -1
 }

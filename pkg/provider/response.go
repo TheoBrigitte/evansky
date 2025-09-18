@@ -9,6 +9,7 @@ type Response interface {
 	GetName() string
 	GetDate() time.Time
 	// TODO: improve this by returning a pointer and nil when not applicable, or implement sub interface for movie/tv/season/episode
+	GetShowID() int
 	GetSeasonNumber() int
 	GetEpisodeNumber() int
 

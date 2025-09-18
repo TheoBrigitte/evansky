@@ -11,11 +11,12 @@ import (
 type tvSeasonResponse struct {
 	result gotmdb.TVSeasonDetails
 
+	showID    int
 	airDate   time.Time
 	mediaType provider.MediaType
 }
 
-func newTVSeasonResponse(result gotmdb.TVSeasonDetails) (*tvSeasonResponse, error) {
+func newTVSeasonResponse(result gotmdb.TVSeasonDetails, showID int) (*tvSeasonResponse, error) {
 	// Parse the first air date in the format "2006-01-02"
 	airDate, err := time.Parse(time.DateOnly, result.AirDate)
 	if err != nil {
@@ -24,6 +25,7 @@ func newTVSeasonResponse(result gotmdb.TVSeasonDetails) (*tvSeasonResponse, erro
 
 	t := &tvSeasonResponse{
 		result:    result,
+		showID:    showID,
 		airDate:   airDate,
 		mediaType: provider.MediaTypeTVSeason,
 	}
@@ -36,6 +38,10 @@ func (r tvSeasonResponse) GetID() int {
 
 func (r tvSeasonResponse) GetName() string {
 	return r.result.Name
+}
+
+func (r tvSeasonResponse) GetShowID() int {
+	return r.showID
 }
 
 func (r tvSeasonResponse) GetSeasonNumber() int {

@@ -38,6 +38,10 @@ func (r tvResponse) GetName() string {
 	return r.result.Name
 }
 
+func (r tvResponse) GetShowID() int {
+	return int(r.result.ID)
+}
+
 func (r tvResponse) GetSeasonNumber() int {
 	return -1
 }

@@ -136,7 +136,7 @@ func (c *Client) searchTVSeasonOrEpisode(req provider.Request) (provider.Respons
 		seasonScore := gstr.Levenshtein(req.Query, season.Name, 1, 1, 1)
 		if bestScore == -1 || seasonScore < bestScore {
 			bestScore = seasonScore
-			bestMatch, err = newTVSeasonResponse(*season)
+			bestMatch, err = newTVSeasonResponse(*season, req.TV.ID)
 			if err != nil {
 				return nil, err
 			}
@@ -160,7 +160,7 @@ func (c *Client) searchTVSeasonOrEpisode(req provider.Request) (provider.Respons
 				r.VoteMetrics = e.VoteMetrics
 				r.Crew = e.Crew
 				r.GuestStars = e.GuestStars
-				bestMatch, err = newTVEpisodeResponse(r)
+				bestMatch, err = newTVEpisodeResponse(r, req.TV.ID)
 				if err != nil {
 					return nil, err
 				}
@@ -202,7 +202,7 @@ func (c *Client) searchTVEpisode(req provider.Request) (provider.Response, error
 			r.VoteMetrics = e.VoteMetrics
 			r.Crew = e.Crew
 			r.GuestStars = e.GuestStars
-			bestMatch, err = newTVEpisodeResponse(r)
+			bestMatch, err = newTVEpisodeResponse(r, req.TV.ID)
 			if err != nil {
 				return nil, err
 			}
@@ -227,7 +227,9 @@ func (c *Client) getTVSeason(req provider.Request) (provider.Response, error) {
 		return nil, err
 	}
 
-	return makeResponse([]gotmdb.TVSeasonDetails{*resp}, newTVSeasonResponse)
+	//return makeResponse([]gotmdb.TVSeasonDetails{*resp}, newTVSeasonResponse)
+
+	return newTVSeasonResponse(*resp, req.TV.ID)
 }
 
 func (c *Client) getTVEpisode(req provider.Request) (provider.Response, error) {
@@ -241,7 +243,13 @@ func (c *Client) getTVEpisode(req provider.Request) (provider.Response, error) {
 		return nil, err
 	}
 
-	return makeResponse([]gotmdb.TVEpisodeDetails{*resp}, newTVEpisodeResponse)
+	//if resp.ID == 0 {
+	//	return nil, fmt.Errorf("no result")
+	//}
+
+	//return makeResponse([]gotmdb.TVEpisodeDetails{*resp}, newTVEpisodeResponse)
+
+	return newTVEpisodeResponse(*resp, req.TV.ID)
 }
 
 // searchMulti search for multi media using query.

@@ -36,6 +36,14 @@ func NewRequest(info parser.Info, req *Request, resp Response) (*Request, error)
 	r := &Request{
 		Query: info.Title,
 		Year:  info.Year,
+		TV:       &RequestTV{},
+	}
+
+	if info.Season > 0 || info.Episode > 0 {
+		// If we have season or episode information, it's a TV show.
+		r.MediaType = MediaTypeTV
+		r.TV.SeasonNumber = info.Season
+		r.TV.EpisodeNumber = info.Episode
 	}
 
 	if resp == nil || req == nil {
@@ -68,37 +76,28 @@ func NewRequest(info parser.Info, req *Request, resp Response) (*Request, error)
 		}
 		return r, nil
 	case MediaTypeTV:
-		if !oneOf(reqType, MediaTypeUnknown) {
+		if oneOf(reqType, MediaTypeMovie) {
 			return nil, conflictError(respType, reqType)
 		}
 		r.MediaType = MediaTypeTV
-		r.TV = &RequestTV{
-			ID:            resp.GetID(),
-			SeasonNumber:  info.Season,
-			EpisodeNumber: info.Episode,
-		}
+		r.TV.ID = resp.GetShowID()
 		return r, nil
 	case MediaTypeTVSeason:
-		if !oneOf(reqType, MediaTypeTV) {
+		if oneOf(reqType, MediaTypeMovie) {
 			return nil, conflictError(respType, reqType)
 		}
 		r.MediaType = MediaTypeTV
-		r.TV = &RequestTV{
-			ID:            req.TV.ID,
-			SeasonNumber:  resp.GetSeasonNumber(),
-			EpisodeNumber: info.Episode,
-		}
+		r.TV.ID = resp.GetShowID()
+		r.TV.SeasonNumber = resp.GetSeasonNumber()
 		return r, nil
 	case MediaTypeTVEpisode:
-		if !oneOf(reqType, MediaTypeTV, MediaTypeTVSeason) {
+		if oneOf(reqType, MediaTypeMovie) {
 			return nil, conflictError(respType, reqType)
 		}
 		r.MediaType = MediaTypeTV
-		r.TV = &RequestTV{
-			ID:            req.TV.ID,
-			SeasonNumber:  req.TV.SeasonNumber,
-			EpisodeNumber: resp.GetEpisodeNumber(),
-		}
+		r.TV.ID = resp.GetShowID()
+		r.TV.SeasonNumber = resp.GetSeasonNumber()
+		r.TV.EpisodeNumber = resp.GetEpisodeNumber()
 		return r, nil
 	}
 
