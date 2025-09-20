@@ -51,7 +51,7 @@ func (g *generic) scan() ([]Node, error) {
 		return nil, err
 	}
 
-	return nodes
+	return nodes, nil
 }
 
 // walk recursively walks the directory tree and processes each file or directory.
