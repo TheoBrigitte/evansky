@@ -19,7 +19,7 @@ import (
 
 // generic implements a generic source that can handle both movies and TV shows.
 // It provides functionality to scan directory structures, parse media information,
-// and query metadata providers to generate rename suggestions.
+// and query metadata providers to generate nodes for renaming operations.
 type generic struct {
 	path    string  // Root path to scan for media files
 	newPath string  // Proposed new path (currently unused)
@@ -40,7 +40,7 @@ func newGeneric(path string, providers []provider.Interface, o Options) *generic
 	return s
 }
 
-// scan scans the source path and returns a list of nodes to rename.
+// scan scans the source path and returns a list of nodes.
 // It starts by getting information about the root path and then recursively
 // walks the directory tree to process each file and directory.
 func (g *generic) scan() ([]Node, error) {
@@ -65,7 +65,7 @@ func (g *generic) scan() ([]Node, error) {
 // 1. Parses the name to extract media information
 // 2. Detects the language based on directory contents
 // 3. Queries metadata providers to get accurate information
-// 4. Generates rename nodes for files or continues recursion for directories
+// 4. Generates nodes for files or continues recursion for directories
 func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Response) ([]Node, error) {
 	// Parse current file or directory name to extract media information.
 	info, err := parser.Parse(entry.Name())
@@ -118,12 +118,14 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 
 	if !entry.IsDir() {
 		// This is a file, generate a rename node for it.
-		name := fmt.Sprintf("%s (%d)", resp.GetName(), resp.GetDate().Year())
-		dir := filepath.Dir(path)
+		//name := fmt.Sprintf("%s (%d)", resp.GetName(), resp.GetDate().Year())
+		//dir := filepath.Dir(path)
 
 		n := Node{
-			PathOld: path,
-			PathNew: filepath.Join(dir, name),
+			Entry:    entry,
+			Path:     path,
+			Info:     *info,
+			Response: resp,
 		}
 		//slog.Info("found", "old", n.PathOld, "new", n.PathNew)
 

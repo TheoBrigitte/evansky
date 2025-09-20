@@ -4,6 +4,9 @@
 package source
 
 import (
+	"io/fs"
+
+	"github.com/TheoBrigitte/evansky/pkg/parser"
 	"github.com/TheoBrigitte/evansky/pkg/provider"
 )
 
@@ -17,11 +20,13 @@ type Source interface {
 }
 
 // Node represents a single file or directory rename operation.
-// It contains the original path and the proposed new path based on
+// It contains the original path, the file info and
 // metadata retrieved from providers.
 type Node struct {
-	PathOld string // Original file or directory path
-	PathNew string // Proposed new file or directory path
+	Entry    fs.DirEntry
+	Info     parser.Info
+	Path     string
+	Response provider.Response
 }
 
 // Options configures the behavior of source scanning operations.
