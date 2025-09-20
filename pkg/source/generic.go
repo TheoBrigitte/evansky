@@ -1,18 +1,18 @@
 package source
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"github.com/abadojack/whatlanggo"
-	"github.com/pemistahl/lingua-go"
+	"github.com/gogf/gf/v2/text/gstr"
 
 	"github.com/TheoBrigitte/evansky/pkg/parser"
 	"github.com/TheoBrigitte/evansky/pkg/provider"
+	"github.com/TheoBrigitte/evansky/pkg/source/language"
 )
 
 type generic struct {
@@ -26,19 +26,6 @@ type generic struct {
 	// TODO: add setting to prefer file name preference over parent directories when finding a match
 	// TODO: add settings to ignore n levels of directories (min-depth), and allow for max depth
 }
-
-var (
-	languages = []lingua.Language{
-		lingua.English,
-		lingua.French,
-		lingua.German,
-		lingua.Spanish,
-	}
-
-	detector = lingua.NewLanguageDetectorBuilder().
-			FromLanguages(languages...).
-			Build()
-)
 
 func newGeneric(path string, providers []provider.Interface) (*generic, error) {
 	s := &generic{
@@ -56,7 +43,7 @@ func (g *generic) Process() error {
 	}
 	dirInfo := fs.FileInfoToDirEntry(info)
 
-	nodes, err := g.walk(g.path, dirInfo, nil, nil)
+	nodes, err := g.walk(g.path, dirInfo, nil)
 	if err != nil {
 		return err
 	}
@@ -66,7 +53,7 @@ func (g *generic) Process() error {
 }
 
 // TODO: enrich parentReq with more info (like if it's a tv show or movie), then merge with current info as we walk down
-func (g *generic) walk(path string, entry fs.DirEntry, parentReq *provider.Request, parentResp provider.Response) ([]Node, error) {
+func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Response) ([]Node, error) {
 	// Parse current file or directory name.
 	info, err := parser.Parse(entry.Name())
 	if err != nil {
@@ -75,27 +62,29 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentReq *provider.Reque
 
 	// TODO: if we have more information than the parent request, backtrack and re-query the providers with the new information. Year is most important.
 
-	// Query the providers with the parsed information.
-	req, err := provider.NewRequest(*info, parentReq, parentResp)
-	if err != nil {
-		return nil, err
+	req := provider.Request{
+		Query: info.Title,
+		Year:  info.Year,
+
+		Response: parentResp,
+		Info:     *info,
 	}
 
-	//language, exists := detector.DetectLanguageOf(req.Query)
-	//if !exists {
-	//	language = lingua.English
-	//}
-	//req.Language = strings.ToLower(language.IsoCode639_1().String())
-	lang := whatlanggo.Detect(req.Query)
-	req.Language = strings.ToLower(lang.Lang.Iso6391())
+	lang, confidence := language.Detect(req)
+	req.Language = lang
 
-	slog.Debug("processing", "info", info, "request", req, "path", path)
-	resp, err := g.Find(*req)
+	//slog.Debug("processing", "info", info, "request", req, "path", path, "confidence", lang.Confidence, "reliable", lang.IsReliable())
+	slog.Info("searching", "path", path, "language", req.Language, "confidence", confidence, "parent", parentResp != nil)
+
+	// Query the providers with the parsed information.
+	resp, err := g.Find(req, entry)
 	if err != nil {
 		slog.Error("processed", "error", err, "path", path)
 		return nil, nil
 	}
-	slog.Debug("processed", "response", resp, "path", path)
+	slog.Info("found", "name", resp.GetName(), "year", resp.GetDate().Year(), "type", fmt.Sprintf("%T", resp))
+	resp.SetRequest(req)
+	//slog.Debug("processed", "response", resp, "path", path)
 
 	name := fmt.Sprintf("%s (%d)", resp.GetName(), resp.GetDate().Year())
 	if !entry.IsDir() {
@@ -105,10 +94,10 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentReq *provider.Reque
 			PathOld: path,
 			PathNew: filepath.Join(dir, name),
 		}
-		slog.Info("found", "old", n.PathOld, "new", n.PathNew)
+		//slog.Info("found", "old", n.PathOld, "new", n.PathNew)
 		return []Node{n}, nil
 	}
-	slog.Info("found", "old", path, "new", name)
+	//slog.Info("found", "old", path, "new", name)
 
 	dirs, err := os.ReadDir(path)
 	if err != nil {
@@ -122,7 +111,7 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentReq *provider.Reque
 	for _, nextEntry := range dirs {
 		nextPath := filepath.Join(path, nextEntry.Name())
 		// TODO: allow for non-recursive scan
-		nodes, err := g.walk(nextPath, nextEntry, req, resp)
+		nodes, err := g.walk(nextPath, nextEntry, resp)
 		if err != nil {
 			return nil, err
 		}
@@ -182,11 +171,11 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentReq *provider.Reque
 
 // Find queries the providers in order until one returns a valid response.
 // lang is the ISO 639-3 language code to use for the query.
-func (g *generic) Find(req provider.Request) (provider.Response, error) {
+func (g *generic) Find(req provider.Request, entry fs.DirEntry) (provider.Response, error) {
 	for _, p := range g.providers {
-		resp, err := p.Search(req)
+		resp, err := g.find(p, req, entry)
 		if err != nil {
-			slog.Debug("provider search error", "provider", p.Name(), "error", err)
+			slog.Warn("provider search error", "provider", p.Name(), "error", err)
 			continue
 		}
 
@@ -194,4 +183,212 @@ func (g *generic) Find(req provider.Request) (provider.Response, error) {
 	}
 
 	return nil, fmt.Errorf("no result")
+}
+
+func (g *generic) find(p provider.Interface, req provider.Request, entry fs.DirEntry) (provider.Response, error) {
+	if req.Response == nil {
+		if req.Info.Title == "" {
+			// We need at least a title to search.
+			return nil, fmt.Errorf("find: no title")
+		}
+		if req.Info.Season > 0 || req.Info.Episode > 0 {
+			// Search for TV show.
+			tv, err := p.SearchTV(req)
+			if err != nil {
+				return nil, err
+			}
+			return g.findTVChild(p, tv, req, nil)
+		}
+
+		// Search for Movie or TV show.
+		return g.searchByPopularity(p, req)
+	}
+
+	switch r := req.Response.(type) {
+	case provider.ResponseMovie:
+		// Return Movie response as is.
+		// TODO: detect if the new info is more accurate than the previous one, and re-query if needed.
+		// we need the previous info to do that.
+		return r, nil
+	case provider.ResponseTV:
+		// if isDir -> search for season then episode
+		// else -> search for episode then season
+		return g.findTVChild(p, r, req, entry)
+	case provider.ResponseTVSeason:
+		if req.Info.Episode > 0 {
+			// Get episode by number
+			return r.GetEpisode(req.Info.Episode)
+		}
+		if req.Info.Title != "" {
+			// Find episode by name.
+			req = g.usePreviousLanguage(req)
+			return g.findTVEpisode(p, []provider.ResponseTVSeason{r}, req)
+		}
+		// We need episode information to go further.
+		return nil, fmt.Errorf("find: no episode information")
+	case provider.ResponseTVEpisode:
+		// Return Episode response as is.
+		// TODO: detect if the new info is more accurate than the previous one, and re-query if needed.
+		// we need the previous info to do that.
+		//return r, nil
+		newReq := g.usePreviousLanguage(req)
+		newReq.Response = r.GetSeason()
+		return g.Find(newReq, entry)
+	}
+
+	return nil, fmt.Errorf("find: unsupported response media type: %T", req.Response)
+}
+
+func (g *generic) searchByPopularity(p provider.Interface, req provider.Request) (provider.Response, error) {
+	slog.Debug("searching by popularity", "query", req.Query, "year", req.Year)
+	movie, err := p.SearchMovie(req)
+	if err != nil && !errors.Is(err, provider.ErrNoResult) {
+		return nil, err
+	}
+
+	tvshow, err := p.SearchTV(req)
+	if err != nil && !errors.Is(err, provider.ErrNoResult) {
+		return nil, err
+	}
+
+	if movie == nil && tvshow == nil {
+		return nil, provider.ErrNoResult
+	}
+
+	if movie == nil {
+		return tvshow, nil
+	}
+
+	if tvshow == nil {
+		return movie, nil
+	}
+
+	if movie.GetPopularity() >= tvshow.GetPopularity() {
+		return movie, nil
+	}
+
+	return tvshow, nil
+}
+
+func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req provider.Request, entry fs.DirEntry) (provider.Response, error) {
+	if req.Info.Season > 0 {
+		req = g.usePreviousLanguage(req)
+
+		// Get season by number
+		season, err := tv.GetSeason(req.Info.Season, req)
+		if err != nil {
+			return nil, err
+		}
+
+		if req.Info.Episode > 0 {
+			// Get episode by number
+			return season.GetEpisode(req.Info.Episode)
+		}
+
+		return season, nil
+	}
+	if req.Info.Episode > 0 {
+		req = g.usePreviousLanguage(req)
+		// Search for episode by number
+		seasons, err := tv.GetSeasons(req)
+		if err != nil {
+			return nil, err
+		}
+		return g.findTVEpisode(p, seasons, req)
+	}
+	if req.Info.Title != "" {
+		// Search for season or episode by name
+		seasons, err := tv.GetSeasons(req)
+		if err != nil {
+			return nil, err
+		}
+		return g.findTVSeasonOrEpisode(p, seasons, req, entry)
+	}
+
+	return nil, fmt.Errorf("findTVChild: no season or episode information")
+}
+
+func (g *generic) findTVSeasonOrEpisode(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request, entry fs.DirEntry) (provider.Response, error) {
+	slog.Debug("find season or episode by name", "seasons", len(seasons), "title", req.Info.Title)
+	var bestMatch provider.Response
+	var bestScore int = -1
+	//seasons := make([]gotmdb.TVSeason, 0, len(show.Seasons))
+	for _, season := range seasons {
+		seasonScore := gstr.Levenshtein(req.Info.Title, season.GetName(), 1, 1, 1)
+		if bestScore == -1 || seasonScore < bestScore {
+			bestScore = seasonScore
+			bestMatch = season
+		}
+
+		episodes, err := season.GetEpisodes()
+		if err != nil {
+			slog.Warn("findTVSeasonOrEpisode: cannot get episodes", "showID", season.GetShow().GetID(), "season", season.GetSeasonNumber(), "error", err)
+			continue
+		}
+		for _, episode := range episodes {
+			episodeScore := gstr.Levenshtein(req.Info.Title, episode.GetName(), 1, 1, 1)
+			if bestScore == -1 || episodeScore < bestScore {
+				bestScore = episodeScore
+				bestMatch = episode
+			}
+		}
+	}
+
+	if bestMatch != nil {
+		return bestMatch, nil
+	}
+
+	return nil, fmt.Errorf("findTVSeasonOrEpisode: no match found for %s", req.Info.Title)
+}
+
+func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request) (provider.Response, error) {
+	slog.Debug("find episode", "seasons", len(seasons), "episode", req.Info.Episode, "title", req.Info.Title)
+	if req.Info.Episode > 0 {
+		for _, season := range seasons {
+			return season.GetEpisode(req.Info.Episode)
+		}
+
+		return nil, fmt.Errorf("findTVEpisode: episode %d not found", req.Info.Episode)
+	}
+
+	if req.Info.Title == "" {
+		return nil, fmt.Errorf("findTVEpisode: no episode information")
+	}
+
+	var bestMatch provider.Response
+	var bestScore int = -1
+	for _, season := range seasons {
+		episodes, err := season.GetEpisodes()
+		if err != nil {
+			slog.Warn("findTVEpisode: cannot get episodes", "showID", season.GetShow().GetID(), "season", season.GetSeasonNumber(), "error", err)
+			continue
+		}
+		for _, episode := range episodes {
+			episodeScore := gstr.Levenshtein(req.Info.Title, episode.GetName(), 1, 1, 1)
+			if bestScore == -1 || episodeScore < bestScore {
+				bestScore = episodeScore
+				bestMatch = episode
+			}
+		}
+	}
+
+	if bestMatch != nil {
+		return bestMatch, nil
+	}
+
+	return nil, fmt.Errorf("findTVEpisode: episode %s no match found", req.Info.Title)
+}
+
+func (g *generic) usePreviousLanguage(req provider.Request) provider.Request {
+	if req.Response == nil {
+		return req
+	}
+
+	prevReq := req.Response.GetRequest()
+	if prevReq == nil || prevReq.Language == "" {
+		return req
+	}
+
+	req.Language = prevReq.Language
+	return req
 }
