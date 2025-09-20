@@ -19,18 +19,15 @@ var (
 		Args:  cobra.MinimumNArgs(1),
 	}
 
-	dryRun bool
-	force  bool
+	dryRun   bool
+	force    bool
+	language string
 )
 
 func init() {
 	Cmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "n", false, "do not change anything")
 	Cmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "skip confirmation")
-
-	// TODO: add flags for selecting providers
-	// add flag for:
-	// - recursive: scan directories recursively
-	// - include directories: include directories in the renaming process
+	Cmd.PersistentFlags().StringVar(&language, "language", "en", "language used for destination names (ISO 639-1 code)")
 
 	register.Initialize(Cmd)
 }

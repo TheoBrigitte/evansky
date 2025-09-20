@@ -17,41 +17,41 @@ import (
 	"github.com/TheoBrigitte/evansky/pkg/source/language"
 )
 
+// generic implements a generic source that can handle both movies and TV shows.
 type generic struct {
 	path    string
 	newPath string
+	options Options
 
 	providers []provider.Interface
-
-	nodes []Node
-
-	// TODO: add setting to prefer file name preference over parent directories when finding a match
-	// TODO: add settings to ignore n levels of directories (min-depth), and allow for max depth
 }
 
-func newGeneric(path string, providers []provider.Interface) (*generic, error) {
+// newGeneric creates a new generic source.
+func newGeneric(path string, providers []provider.Interface, o Options) *generic {
 	s := &generic{
 		path:      path,
 		providers: providers,
 	}
 
-	return s, nil
+	return s
 }
 
-func (g *generic) Process() error {
+// scan scans the source path and returns a list of nodes to rename.
+func (g *generic) scan() ([]Node, error) {
+	// Get initial file or directory info.
 	info, err := os.Lstat(g.path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	dirInfo := fs.FileInfoToDirEntry(info)
 
+	// Start walking the directory tree.
 	nodes, err := g.walk(g.path, dirInfo, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	g.nodes = append(g.nodes, nodes...)
-	return nil
-	//return filepath.WalkDir(g.path, g.startWalk)
+
+	return nodes
 }
 
 // TODO: enrich parentReq with more info (like if it's a tv show or movie), then merge with current info as we walk down

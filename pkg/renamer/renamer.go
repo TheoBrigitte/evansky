@@ -2,6 +2,7 @@ package renamer
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
 	"github.com/TheoBrigitte/evansky/pkg/source"
@@ -36,18 +37,15 @@ func (r *renamer) Run(dryRun, force bool) error {
 	o := source.Options{}
 
 	for _, path := range r.paths {
-		s, err := source.NewSource(path, r.providers, o)
+		_, err := source.Scan(path, r.providers, o)
 		if err != nil {
-			return fmt.Errorf("failed to initialize path %s: %w", path, err)
-		}
-
-		err = s.Process()
-		if err != nil {
-			return fmt.Errorf("failed to get items for path %s: %w", path, err)
+			slog.Error("scan failed", "path", path, "error", err)
+			continue
 		}
 	}
 
 	// TODO: handle non destructive renaming, keeping other files (subtitles, etc)
+	// TODO: include directories in the renaming process
 
 	return nil
 }

@@ -1,16 +1,20 @@
 package source
 
 import (
-	"os"
-
 	"github.com/TheoBrigitte/evansky/pkg/provider"
 )
 
 type Source interface {
-	Process() error
+	Scan(string, []provider.Interface, Options) ([]Node, error)
+}
+
+type Node struct {
+	PathOld string
+	PathNew string
 }
 
 type Options struct {
+	// TODO: add setting to prefer file name preference over parent directories when finding a match
 	Recursive bool
 	MinDepth  int
 	MaxDepth  int
@@ -18,18 +22,12 @@ type Options struct {
 	SkipDirectories bool
 }
 
-type source struct {
-	info os.FileInfo
+func Scan(path string, providers []provider.Interface, o Options) ([]Node, error) {
+	s := &generic{
+		path:      path,
+		providers: providers,
+		options:   o,
+	}
 
-	items []Source
-}
-
-// NewSource creates a new source from the given path.
-func NewSource(path string, providers []provider.Interface, o Options) (Source, error) {
-	return newGeneric(path, providers)
-}
-
-type Node struct {
-	PathOld string
-	PathNew string
+	return s.scan()
 }
