@@ -1,3 +1,6 @@
+// Package language provides language detection capabilities for media files and directories.
+// It supports multiple detection methods and maintains language consistency across
+// directory tree traversal to improve metadata accuracy.
 package language
 
 import (
@@ -12,6 +15,8 @@ import (
 	"github.com/TheoBrigitte/evansky/pkg/provider"
 )
 
+// languages defines the supported languages for detection.
+// Currently supports English, French, German, and Spanish.
 var (
 	languages = []lingua.Language{
 		lingua.English,
@@ -20,12 +25,17 @@ var (
 		lingua.Spanish,
 	}
 
+	// detector is a pre-configured language detector using the Lingua library.
+	// It's configured with a minimum relative distance of 0.9 for higher accuracy.
 	detector = lingua.NewLanguageDetectorBuilder().
 			FromLanguages(languages...).
 			WithMinimumRelativeDistance(0.9).
 			Build()
 )
 
+// Lingua detects the language of the input text using the Lingua language detection library.
+// It returns the ISO 639-1 language code and a confidence score between 0 and 1.
+// If no language is detected, it defaults to English.
 func Lingua(input string) (string, float64) {
 	lang, exists := detector.DetectLanguageOf(input)
 	if !exists {
@@ -41,15 +51,26 @@ func Lingua(input string) (string, float64) {
 
 	return lang.IsoCode639_1().String(), confidence
 }
+
+// Whatlanggo detects the language of the input text using the whatlanggo library.
+// It returns the ISO 639-1 language code and a confidence score.
+// This provides an alternative detection method to Lingua.
 func Whatlanggo(input string) (string, float64) {
 	lang := whatlanggo.Detect(input)
 	return lang.Lang.Iso6391(), float64(lang.Confidence)
 }
 
+// Detect determines the appropriate language for a media request based on multiple factors.
+// It considers directory contents, parent request context, and defaults appropriately.
+// Returns three values:
+// - lang: the detected language code for the current request
+// - confidence: detection confidence score (or -1 if not applicable)
+// - childLang: the detected language for child directories based on their names
 func Detect(req provider.Request, entries []os.DirEntry) (string, float64, string) {
 	var childLang string
 	if len(entries) > 0 {
 		// Read all entries, concatenate their names and detect the language from that.
+		// This provides language context for child directories.
 		names := make([]string, 0, len(entries))
 		for _, entry := range entries {
 			names = append(names, filepath.Base(entry.Name()))

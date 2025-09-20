@@ -18,15 +18,19 @@ import (
 )
 
 // generic implements a generic source that can handle both movies and TV shows.
+// It provides functionality to scan directory structures, parse media information,
+// and query metadata providers to generate rename suggestions.
 type generic struct {
-	path    string
-	newPath string
-	options Options
+	path    string  // Root path to scan for media files
+	newPath string  // Proposed new path (currently unused)
+	options Options // Configuration options for scanning behavior
 
-	providers []provider.Interface
+	providers []provider.Interface // List of metadata providers to query
 }
 
-// newGeneric creates a new generic source.
+// newGeneric creates a new generic source instance with the specified path,
+// providers, and options. The generic source can handle both movies and TV shows
+// by querying metadata providers based on parsed file information.
 func newGeneric(path string, providers []provider.Interface, o Options) *generic {
 	s := &generic{
 		path:      path,
@@ -37,6 +41,8 @@ func newGeneric(path string, providers []provider.Interface, o Options) *generic
 }
 
 // scan scans the source path and returns a list of nodes to rename.
+// It starts by getting information about the root path and then recursively
+// walks the directory tree to process each file and directory.
 func (g *generic) scan() ([]Node, error) {
 	// Get initial file or directory info.
 	info, err := os.Lstat(g.path)
@@ -55,6 +61,11 @@ func (g *generic) scan() ([]Node, error) {
 }
 
 // walk recursively walks the directory tree and processes each file or directory.
+// For each entry, it:
+// 1. Parses the name to extract media information
+// 2. Detects the language based on directory contents
+// 3. Queries metadata providers to get accurate information
+// 4. Generates rename nodes for files or continues recursion for directories
 func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Response) ([]Node, error) {
 	// Parse current file or directory name to extract media information.
 	info, err := parser.Parse(entry.Name())
@@ -88,7 +99,7 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 		}
 	}
 
-	// Detect the language of the media based multiple factors.
+	// Detect the language of the media based on multiple factors.
 	// confidence is only used for logging purposes.
 	lang, confidence, childLang := language.Detect(req, dirs)
 	req.Language = lang
@@ -106,8 +117,7 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 	//slog.Debug("processed", "response", resp, "path", path)
 
 	if !entry.IsDir() {
-		// This is a file, generate a node for it.
-
+		// This is a file, generate a rename node for it.
 		name := fmt.Sprintf("%s (%d)", resp.GetName(), resp.GetDate().Year())
 		dir := filepath.Dir(path)
 
@@ -123,7 +133,7 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 
 	// This is a directory, continue walking.
 	// Enforce the detected language for child entries, as this is more accurate since
-	// language was detect over all child entries.
+	// language was detected over all child entries.
 	req.Language = childLang
 	resp.SetRequest(req)
 
@@ -135,20 +145,22 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 		// Build the next path as: current path + entry name.
 		nextPath := filepath.Join(path, nextEntry.Name())
 		// TODO: allow for non-recursive scan
-		nodes, err := g.walk(nextPath, nextEntry, resp)
+		childNodes, err := g.walk(nextPath, nextEntry, resp)
 		if err != nil {
 			return nil, err
 		}
-		if nodes == nil {
+		if childNodes == nil {
 			continue
 		}
-		nodes = append(nodes, nodes...)
+		nodes = append(nodes, childNodes...)
 	}
 
 	return nodes, nil
 }
 
 // Find queries all providers in order until one returns a valid response.
+// It tries each provider sequentially and returns the first successful result.
+// If all providers fail, it returns an error.
 func (g *generic) Find(req provider.Request) (provider.Response, error) {
 	for _, p := range g.providers {
 		resp, err := g.find(p, req)
@@ -164,7 +176,14 @@ func (g *generic) Find(req provider.Request) (provider.Response, error) {
 }
 
 // find queries a single provider with the given request and returns a response.
-// it makes decisions based on the request information and previous response (if any).
+// It makes a decisions based on the request information and previous response:
+// - For top-level media:
+//   - If season or episode information is provided, searches for TV shows
+//   - Otherwise searches for movies or TV shows by popularity
+//
+// - For Movie: returns the movie response directly
+// - For TV show: searches for seasons or episodes based on available information
+// - For movies: returns the movie response directly
 func (g *generic) find(p provider.Interface, req provider.Request) (provider.Response, error) {
 	if req.Response == nil {
 		// Processing a top level media (no previous response).
@@ -226,6 +245,8 @@ func (g *generic) find(p provider.Interface, req provider.Request) (provider.Res
 }
 
 // searchByPopularity searches for both movie and TV show and returns the most popular one.
+// This method is used when we have ambiguous media that could be either a movie or TV show.
+// It queries both endpoints and compares popularity scores to determine the best match.
 func (g *generic) searchByPopularity(p provider.Interface, req provider.Request) (provider.Response, error) {
 	slog.Debug("searching by popularity", "query", req.Query, "year", req.Year)
 	movie, err := p.SearchMovie(req)
@@ -265,6 +286,10 @@ func (g *generic) searchByPopularity(p provider.Interface, req provider.Request)
 }
 
 // findTVChild finds a TV show child (season or episode) based on the request information.
+// It handles different scenarios:
+// - Season number provided: gets the specific season, optionally with episode
+// - Episode number only: searches across all seasons for the episode
+// - Title only: attempts season number detection or searches by name
 func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req provider.Request) (provider.Response, error) {
 	if req.Info.Season > 0 {
 		// Prefer season number if available
@@ -287,7 +312,7 @@ func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req 
 	}
 
 	if req.Info.Episode > 0 {
-		// Only episode number provided, search for episode by name
+		// Only episode number provided, search for episode across all seasons
 		//req = g.usePreviousLanguage(req)
 		seasons, err := tv.GetSeasons(req)
 		if err != nil {
@@ -324,6 +349,8 @@ func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req 
 }
 
 // findTVSeasonOrEpisode finds a TV show season or episode based on the request information.
+// It uses Levenshtein distance to find the best match among all seasons and episodes,
+// comparing the request title against season names and episode names.
 func (g *generic) findTVSeasonOrEpisode(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request) (provider.Response, error) {
 	slog.Debug("find season or episode by name", "seasons", len(seasons), "title", req.Info.Title)
 
@@ -360,6 +387,9 @@ func (g *generic) findTVSeasonOrEpisode(p provider.Interface, seasons []provider
 }
 
 // findTVEpisode finds a TV show episode based on the request information.
+// It handles two scenarios:
+// - Episode number provided: searches for the episode by number across seasons
+// - Episode title provided: uses Levenshtein distance to find the best matching episode name
 func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request) (provider.Response, error) {
 	slog.Debug("find episode", "seasons", len(seasons), "episode", req.Info.Episode, "title", req.Info.Title)
 	if req.Info.Episode > 0 {
@@ -402,9 +432,13 @@ func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.Respons
 	return nil, fmt.Errorf("findTVEpisode: episode %s no match found", req.Info.Title)
 }
 
+// seasonRegex is a compiled regular expression used to extract numeric values
+// from season directory names for season number detection.
 var seasonRegex = regexp.MustCompile(`[0-9]+`)
 
-// detectSeasonNumber tries to detect a season number from a string.
+// detectSeasonNumber tries to detect a season number from a directory name string.
+// It extracts all numeric sequences from the name and returns the last one as the season number.
+// This heuristic works for common season directory naming patterns like "Season 1", "S02", etc.
 func (g *generic) detectSeasonNumber(name string) (int, error) {
 	matches := seasonRegex.FindAllString(name, -1)
 	if len(matches) > 0 {
@@ -419,6 +453,9 @@ func (g *generic) detectSeasonNumber(name string) (int, error) {
 	return -1, nil
 }
 
+// usePreviousLanguage copies the language setting from a previous request to maintain
+// language consistency throughout the processing tree. This ensures that once a language
+// is detected at a higher level, it's propagated to child requests.
 func (g *generic) usePreviousLanguage(req provider.Request) provider.Request {
 	if req.Response == nil {
 		return req
