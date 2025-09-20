@@ -2,6 +2,7 @@ package provider
 
 import (
 	"fmt"
+	"io/fs"
 
 	"github.com/TheoBrigitte/evansky/pkg/parser"
 )
@@ -12,6 +13,7 @@ type Request struct {
 	Year     int
 	Language string
 	Info     parser.Info
+	Entry    fs.DirEntry
 
 	Response Response
 }

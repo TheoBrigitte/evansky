@@ -33,8 +33,8 @@ type ResponseTVSeason interface {
 
 	GetShow() ResponseTV
 	GetSeasonNumber() int
-	GetEpisode(int) (ResponseTVEpisode, error)
-	GetEpisodes() ([]ResponseTVEpisode, error)
+	GetEpisode(int, Request) (ResponseTVEpisode, error)
+	GetEpisodes(Request) ([]ResponseTVEpisode, error)
 
 	ResponseBaseTVSeason
 }

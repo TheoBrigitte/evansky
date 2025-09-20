@@ -15,7 +15,8 @@ type tvResponse struct {
 
 	result       gotmdb.TVShowResult
 	firstAirDate time.Time
-	seasons      []provider.ResponseTVSeason
+	// Language indexed seasons cache
+	seasons map[string][]provider.ResponseTVSeason
 
 	client *Client
 }
@@ -29,9 +30,12 @@ func (c *Client) newTVResponse(result gotmdb.TVShowResult) (*tvResponse, error) 
 
 	t := &tvResponse{
 		ResponseBaseTV: provider.NewResponseBaseTV(),
-		result:         result,
-		firstAirDate:   firstAirDate,
-		client:         c,
+
+		result:       result,
+		firstAirDate: firstAirDate,
+		seasons:      make(map[string][]provider.ResponseTVSeason),
+
+		client: c,
 	}
 	return t, nil
 }
@@ -54,8 +58,8 @@ func (r tvResponse) GetPopularity() int {
 
 func (r tvResponse) GetSeasons(req provider.Request) ([]provider.ResponseTVSeason, error) {
 	slog.Debug("get seasons", "show_id", r.GetID(), "language", req.Language)
-	if r.seasons != nil {
-		return r.seasons, nil
+	if s, ok := r.seasons[req.Language]; ok {
+		return s, nil
 	}
 
 	languageQuery := buildLanguageQuery(req)
@@ -82,8 +86,9 @@ func (r tvResponse) GetSeasons(req provider.Request) ([]provider.ResponseTVSeaso
 		return nil, fmt.Errorf("no season found for show %d", r.GetID())
 	}
 
-	r.seasons = seasons
-	return r.seasons, nil
+	r.seasons[req.Language] = seasons
+
+	return seasons, nil
 }
 
 func (r tvResponse) GetSeason(seasonNumber int, req provider.Request) (provider.ResponseTVSeason, error) {

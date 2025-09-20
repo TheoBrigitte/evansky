@@ -12,11 +12,14 @@ import (
 
 type tvSeasonResponse struct {
 	provider.ResponseBaseTVSeason
-	result gotmdb.TVSeasonDetails
 
+	result  gotmdb.TVSeasonDetails
 	airDate time.Time
 	show    provider.ResponseTV
-	client  *Client
+	// Language indexed episodes cache
+	episodes map[string][]provider.ResponseTVEpisode
+
+	client *Client
 }
 
 func (c *Client) newTVSeasonResponse(result gotmdb.TVSeasonDetails, show provider.ResponseTV) (*tvSeasonResponse, error) {
@@ -28,10 +31,13 @@ func (c *Client) newTVSeasonResponse(result gotmdb.TVSeasonDetails, show provide
 
 	t := &tvSeasonResponse{
 		ResponseBaseTVSeason: provider.NewResponseBaseTVSeason(),
-		result:               result,
-		show:                 show,
-		airDate:              airDate,
-		client:               c,
+
+		result:   result,
+		show:     show,
+		airDate:  airDate,
+		episodes: make(map[string][]provider.ResponseTVEpisode),
+
+		client: c,
 	}
 	return t, nil
 }
@@ -61,10 +67,20 @@ func (r tvSeasonResponse) GetSeasonNumber() int {
 	return r.result.SeasonNumber
 }
 
-func (r tvSeasonResponse) GetEpisodes() ([]provider.ResponseTVEpisode, error) {
+func (r tvSeasonResponse) GetEpisodes(req provider.Request) ([]provider.ResponseTVEpisode, error) {
 	slog.Debug("get episodes", "show_id", r.show.GetID(), "season_number", r.result.SeasonNumber)
+	if e, ok := r.episodes[req.Language]; ok {
+		return e, nil
+	}
+
+	languageQuery := buildLanguageQuery(req)
+	season, err := r.client.client.GetTVSeasonDetails(r.GetShow().GetID(), r.GetSeasonNumber(), languageQuery)
+	if err != nil {
+		return nil, err
+	}
+
 	episodes := make([]provider.ResponseTVEpisode, 0, len(r.result.Episodes))
-	for _, e := range r.result.Episodes {
+	for _, e := range season.Episodes {
 		// This is a dirty way to convert an episode to gotmdb.TVEpisodeDetails, as season.Episodes has no concrete type.
 		var ed gotmdb.TVEpisodeDetails
 		ed.AirDate = e.AirDate
@@ -90,28 +106,21 @@ func (r tvSeasonResponse) GetEpisodes() ([]provider.ResponseTVEpisode, error) {
 		return nil, fmt.Errorf("no episode found in season %d of show %d", r.result.SeasonNumber, r.show.GetID())
 	}
 
+	r.episodes[req.Language] = episodes
+
 	return episodes, nil
 }
 
-func (r tvSeasonResponse) GetEpisode(episodeNumber int) (provider.ResponseTVEpisode, error) {
+func (r tvSeasonResponse) GetEpisode(episodeNumber int, req provider.Request) (provider.ResponseTVEpisode, error) {
 	slog.Debug("get episode", "show_id", r.show.GetID(), "season_number", r.result.SeasonNumber, "episode_number", episodeNumber)
-	for _, e := range r.result.Episodes {
-		if e.EpisodeNumber == episodeNumber {
-			// This is a dirty way to convert an episode to gotmdb.TVEpisodeDetails, as season.Episodes has no concrete type.
-			var ed gotmdb.TVEpisodeDetails
-			ed.AirDate = e.AirDate
-			ed.EpisodeNumber = e.EpisodeNumber
-			ed.ID = e.ID
-			ed.Name = e.Name
-			ed.Overview = e.Overview
-			ed.ProductionCode = e.ProductionCode
-			ed.Runtime = e.Runtime
-			ed.SeasonNumber = e.SeasonNumber
-			ed.StillPath = e.StillPath
-			ed.VoteMetrics = e.VoteMetrics
-			ed.Crew = e.Crew
-			ed.GuestStars = e.GuestStars
-			return r.client.newTVEpisodeResponse(ed, r)
+	episodes, error := r.GetEpisodes(req)
+	if error != nil {
+		return nil, error
+	}
+
+	for _, e := range episodes {
+		if e.GetEpisodeNumber() == episodeNumber {
+			return e, nil
 		}
 	}
 

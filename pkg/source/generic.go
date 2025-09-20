@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 
 	"github.com/gogf/gf/v2/text/gstr"
 
@@ -68,22 +70,30 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 
 		Response: parentResp,
 		Info:     *info,
+		Entry:    entry,
 	}
 
-	lang, confidence := language.Detect(req)
+	var dirs []os.DirEntry
+	if entry.IsDir() {
+		dirs, err = os.ReadDir(path)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	lang, confidence, childLang := language.Detect(req, dirs)
 	req.Language = lang
 
 	//slog.Debug("processing", "info", info, "request", req, "path", path, "confidence", lang.Confidence, "reliable", lang.IsReliable())
 	slog.Info("searching", "path", path, "language", req.Language, "confidence", confidence, "parent", parentResp != nil)
 
 	// Query the providers with the parsed information.
-	resp, err := g.Find(req, entry)
+	resp, err := g.Find(req)
 	if err != nil {
 		slog.Error("processed", "error", err, "path", path)
 		return nil, nil
 	}
 	slog.Info("found", "name", resp.GetName(), "year", resp.GetDate().Year(), "type", fmt.Sprintf("%T", resp))
-	resp.SetRequest(req)
 	//slog.Debug("processed", "response", resp, "path", path)
 
 	name := fmt.Sprintf("%s (%d)", resp.GetName(), resp.GetDate().Year())
@@ -98,11 +108,8 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 		return []Node{n}, nil
 	}
 	//slog.Info("found", "old", path, "new", name)
-
-	dirs, err := os.ReadDir(path)
-	if err != nil {
-		return nil, err
-	}
+	req.Language = childLang
+	resp.SetRequest(req)
 
 	// TODO: Try to identify directory pattern (tv show, movie collection, etc).
 	// Backtrack if we detect a different media type than the one we are looking for.
@@ -171,9 +178,9 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 
 // Find queries the providers in order until one returns a valid response.
 // lang is the ISO 639-3 language code to use for the query.
-func (g *generic) Find(req provider.Request, entry fs.DirEntry) (provider.Response, error) {
+func (g *generic) Find(req provider.Request) (provider.Response, error) {
 	for _, p := range g.providers {
-		resp, err := g.find(p, req, entry)
+		resp, err := g.find(p, req)
 		if err != nil {
 			slog.Warn("provider search error", "provider", p.Name(), "error", err)
 			continue
@@ -185,19 +192,19 @@ func (g *generic) Find(req provider.Request, entry fs.DirEntry) (provider.Respon
 	return nil, fmt.Errorf("no result")
 }
 
-func (g *generic) find(p provider.Interface, req provider.Request, entry fs.DirEntry) (provider.Response, error) {
+func (g *generic) find(p provider.Interface, req provider.Request) (provider.Response, error) {
 	if req.Response == nil {
 		if req.Info.Title == "" {
 			// We need at least a title to search.
 			return nil, fmt.Errorf("find: no title")
 		}
 		if req.Info.Season > 0 || req.Info.Episode > 0 {
-			// Search for TV show.
+			// Search for TV show season or episode.
 			tv, err := p.SearchTV(req)
 			if err != nil {
 				return nil, err
 			}
-			return g.findTVChild(p, tv, req, nil)
+			return g.findTVChild(p, tv, req)
 		}
 
 		// Search for Movie or TV show.
@@ -213,15 +220,15 @@ func (g *generic) find(p provider.Interface, req provider.Request, entry fs.DirE
 	case provider.ResponseTV:
 		// if isDir -> search for season then episode
 		// else -> search for episode then season
-		return g.findTVChild(p, r, req, entry)
+		return g.findTVChild(p, r, req)
 	case provider.ResponseTVSeason:
 		if req.Info.Episode > 0 {
 			// Get episode by number
-			return r.GetEpisode(req.Info.Episode)
+			return r.GetEpisode(req.Info.Episode, req)
 		}
 		if req.Info.Title != "" {
 			// Find episode by name.
-			req = g.usePreviousLanguage(req)
+			//req = g.usePreviousLanguage(req)
 			return g.findTVEpisode(p, []provider.ResponseTVSeason{r}, req)
 		}
 		// We need episode information to go further.
@@ -231,9 +238,10 @@ func (g *generic) find(p provider.Interface, req provider.Request, entry fs.DirE
 		// TODO: detect if the new info is more accurate than the previous one, and re-query if needed.
 		// we need the previous info to do that.
 		//return r, nil
-		newReq := g.usePreviousLanguage(req)
+		//newReq := g.usePreviousLanguage(req)
+		newReq := req
 		newReq.Response = r.GetSeason()
-		return g.Find(newReq, entry)
+		return g.Find(newReq)
 	}
 
 	return nil, fmt.Errorf("find: unsupported response media type: %T", req.Response)
@@ -270,9 +278,9 @@ func (g *generic) searchByPopularity(p provider.Interface, req provider.Request)
 	return tvshow, nil
 }
 
-func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req provider.Request, entry fs.DirEntry) (provider.Response, error) {
+func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req provider.Request) (provider.Response, error) {
 	if req.Info.Season > 0 {
-		req = g.usePreviousLanguage(req)
+		//req = g.usePreviousLanguage(req)
 
 		// Get season by number
 		season, err := tv.GetSeason(req.Info.Season, req)
@@ -282,13 +290,13 @@ func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req 
 
 		if req.Info.Episode > 0 {
 			// Get episode by number
-			return season.GetEpisode(req.Info.Episode)
+			return season.GetEpisode(req.Info.Episode, req)
 		}
 
 		return season, nil
 	}
 	if req.Info.Episode > 0 {
-		req = g.usePreviousLanguage(req)
+		//req = g.usePreviousLanguage(req)
 		// Search for episode by number
 		seasons, err := tv.GetSeasons(req)
 		if err != nil {
@@ -296,19 +304,32 @@ func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req 
 		}
 		return g.findTVEpisode(p, seasons, req)
 	}
+
 	if req.Info.Title != "" {
+		if req.Entry.IsDir() {
+			// Try to detect season number from directory name
+			seasonNumber, err := g.detectSeasonNumber(req.Info.Title)
+			if err != nil {
+				slog.Warn("findTVChild: cannot detect season number", "title", req.Info.Title, "error", err)
+			}
+
+			if seasonNumber > 0 {
+				return tv.GetSeason(seasonNumber, req)
+			}
+		}
+
 		// Search for season or episode by name
 		seasons, err := tv.GetSeasons(req)
 		if err != nil {
 			return nil, err
 		}
-		return g.findTVSeasonOrEpisode(p, seasons, req, entry)
+		return g.findTVSeasonOrEpisode(p, seasons, req)
 	}
 
 	return nil, fmt.Errorf("findTVChild: no season or episode information")
 }
 
-func (g *generic) findTVSeasonOrEpisode(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request, entry fs.DirEntry) (provider.Response, error) {
+func (g *generic) findTVSeasonOrEpisode(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request) (provider.Response, error) {
 	slog.Debug("find season or episode by name", "seasons", len(seasons), "title", req.Info.Title)
 	var bestMatch provider.Response
 	var bestScore int = -1
@@ -320,7 +341,7 @@ func (g *generic) findTVSeasonOrEpisode(p provider.Interface, seasons []provider
 			bestMatch = season
 		}
 
-		episodes, err := season.GetEpisodes()
+		episodes, err := season.GetEpisodes(req)
 		if err != nil {
 			slog.Warn("findTVSeasonOrEpisode: cannot get episodes", "showID", season.GetShow().GetID(), "season", season.GetSeasonNumber(), "error", err)
 			continue
@@ -345,7 +366,7 @@ func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.Respons
 	slog.Debug("find episode", "seasons", len(seasons), "episode", req.Info.Episode, "title", req.Info.Title)
 	if req.Info.Episode > 0 {
 		for _, season := range seasons {
-			return season.GetEpisode(req.Info.Episode)
+			return season.GetEpisode(req.Info.Episode, req)
 		}
 
 		return nil, fmt.Errorf("findTVEpisode: episode %d not found", req.Info.Episode)
@@ -358,7 +379,7 @@ func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.Respons
 	var bestMatch provider.Response
 	var bestScore int = -1
 	for _, season := range seasons {
-		episodes, err := season.GetEpisodes()
+		episodes, err := season.GetEpisodes(req)
 		if err != nil {
 			slog.Warn("findTVEpisode: cannot get episodes", "showID", season.GetShow().GetID(), "season", season.GetSeasonNumber(), "error", err)
 			continue
@@ -377,6 +398,22 @@ func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.Respons
 	}
 
 	return nil, fmt.Errorf("findTVEpisode: episode %s no match found", req.Info.Title)
+}
+
+var seasonRegex = regexp.MustCompile(`[0-9]+`)
+
+func (g *generic) detectSeasonNumber(name string) (int, error) {
+	matches := seasonRegex.FindAllString(name, -1)
+	if len(matches) > 0 {
+		// Convert the last match to an integer.
+		seasonNumber, err := strconv.Atoi(matches[len(matches)-1])
+		if err != nil {
+			return -1, err
+		}
+		return seasonNumber, nil
+	}
+
+	return -1, nil
 }
 
 func (g *generic) usePreviousLanguage(req provider.Request) provider.Request {

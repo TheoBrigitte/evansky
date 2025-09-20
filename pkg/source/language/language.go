@@ -1,6 +1,9 @@
 package language
 
 import (
+	"log/slog"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/abadojack/whatlanggo"
@@ -19,8 +22,8 @@ var (
 
 	detector = lingua.NewLanguageDetectorBuilder().
 			FromLanguages(languages...).
-		//WithMinimumRelativeDistance(0.9).
-		Build()
+			WithMinimumRelativeDistance(0.9).
+			Build()
 )
 
 func Lingua(input string) (string, float64) {
@@ -43,13 +46,40 @@ func Whatlanggo(input string) (string, float64) {
 	return lang.Lang.Iso6391(), float64(lang.Confidence)
 }
 
-func Detect(req provider.Request) (string, float64) {
-	if req.Response == nil {
-		// Use default language for initial search, to let the provider decide the best match.
-		return "en", -1
+func Detect(req provider.Request, entries []os.DirEntry) (string, float64, string) {
+	var childLang string
+	if len(entries) > 0 {
+		// Read all entries, concatenate their names and detect the language from that.
+		names := make([]string, 0, len(entries))
+		for _, entry := range entries {
+			names = append(names, filepath.Base(entry.Name()))
+		}
+
+		lang, _ := Lingua(strings.Join(names, "\n"))
+		lang = strings.ToLower(lang)
+
+		//slog.Debug("language: detected childs language", "language", lang, "confidence", confidence)
+		childLang = lang
+		//return strings.ToLower(lang), confidence
 	}
 
-	lang, confidence := Lingua(req.Query)
+	if req.Response == nil {
+		// Use default language for initial search, to let the provider decide the best match.
+		slog.Debug("language: no parent, using default language", "language", "en")
+		return "en", -1, childLang
+	}
 
-	return strings.ToLower(lang), confidence
+	// Use previously detected language
+	// Having a previous request means we are already down in the tree.
+	prevReq := req.Response.GetRequest()
+	if prevReq == nil {
+		slog.Debug("language: no parent, using default language", "language", "en")
+		return "en", -1, childLang
+	}
+
+	slog.Debug("language: detected", "language", prevReq.Language)
+	return prevReq.Language, -1, childLang
+
+	//lang, confidence := Lingua(req.Query)
+	//return strings.ToLower(lang), confidence
 }
