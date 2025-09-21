@@ -52,7 +52,7 @@ func (f JellyfinFormatter) TVEpisode(e provider.ResponseTVEpisode) []string {
 	seasonPadding := len(strconv.Itoa(len(show.GetSeasons())))
 	episodePadding := len(strconv.Itoa(len(season.GetEpisodes())))
 
-	episodeFormat := fmt.Sprintf("%s S%0*dE%0*d", show.GetName(), seasonPadding, season.GetSeasonNumber(), episodePadding, e.GetEpisodeNumber())
+	episodeFormat := fmt.Sprintf("%s - S%0*dE%0*d - %s", show.GetName(), seasonPadding, season.GetSeasonNumber(), episodePadding, e.GetEpisodeNumber(), e.GetName())
 
 	return append(seasonFormat, episodeFormat)
 }
