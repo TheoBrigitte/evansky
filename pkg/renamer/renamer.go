@@ -122,12 +122,14 @@ func (r *renamer) Run() (err error) {
 	for src, dst := range r.files {
 		realSrc := src
 		if r.o.RenameMode == "symlink" {
-			realSrc, err = filepath.Rel(filepath.Dir(dst), src)
+			realSrc, err = getSymlinkSrc(src, dst)
 			if err != nil {
 				r.errors[src] = err
 				continue
 			}
 		}
+
+		// Perform the write operation
 		err := r.write(realSrc, dst, w)
 		if err != nil {
 			r.errors[src] = err
@@ -235,6 +237,23 @@ func (r *renamer) write(src, dst string, fn writer) error {
 	}
 
 	return fn(src, dst)
+}
+
+func getSymlinkSrc(src, dst string) (string, error) {
+	absSrc, err := filepath.Abs(src)
+	if err != nil {
+		return "", err
+	}
+	absDst, err := filepath.Abs(filepath.Dir(dst))
+	if err != nil {
+		return "", err
+	}
+	realSrc, err := filepath.Rel(absDst, absSrc)
+	if err != nil {
+		return "", err
+	}
+
+	return realSrc, nil
 }
 
 func copyFile(src, dst string) error {
