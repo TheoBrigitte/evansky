@@ -1,10 +1,9 @@
 package source
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
-	"regexp"
-	"strconv"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
 )
@@ -15,6 +14,43 @@ import (
 // - Episode number only: searches across all seasons for the episode
 // - Title only: attempts season number detection or searches by name
 func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req provider.Request) (provider.Response, error) {
+	resp, err := g.findTVChildWithNumber(p, tv, req)
+	if err != nil {
+		return nil, err
+	}
+	if resp != nil {
+		return resp, nil
+	}
+
+	if req.Query != "" {
+		// Only title provided, try to detect season number from directory name if possible
+
+		if req.Entry.IsDir() {
+			// Try to detect season number from directory name
+			seasonNumber, err := extractNumber(req.Query, seasonRegex)
+			if err != nil {
+				slog.Warn("findTVChild: cannot detect season number", "title", req.Query, "error", err)
+			}
+
+		} else {
+			// Try to detect episode number from directory name
+			episodeNumber, err := extractNumber(req.Query, episodeRegex)
+			if err != nil {
+				slog.Warn("findTVChild: cannot detect episode number", "title", req.Query, "error", err)
+			}
+		}
+		if seasonNumber > 0 || episodeNumber > 0 {
+			return g.findTVChildWithNumber(p, tv, req)
+		}
+
+		// Search for season or episode by name
+		return g.findTVSeasonOrEpisode(p, tv.GetSeasons(), req)
+	}
+
+	return nil, fmt.Errorf("findTVChild: no season or episode information")
+}
+
+func (g *generic) findTVChildWithNumber(p provider.Interface, tv provider.ResponseTV, req provider.Request) (provider.Response, error) {
 	if req.Info.Season > 0 {
 		// Prefer season number if available
 
@@ -41,27 +77,7 @@ func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req 
 		return g.findTVEpisode(p, tv.GetSeasons(), req)
 	}
 
-	if req.Query != "" {
-		// Only title provided, try to detect season number from directory name if possible
-
-		if req.Entry.IsDir() {
-			// Try to detect season number from directory name
-			seasonNumber, err := g.detectSeasonNumber(req.Query)
-			if err != nil {
-				slog.Warn("findTVChild: cannot detect season number", "title", req.Query, "error", err)
-			}
-
-			if seasonNumber > 0 {
-				// Season number detected, get the season
-				return tv.GetSeason(seasonNumber)
-			}
-		}
-
-		// Search for season or episode by name
-		return g.findTVSeasonOrEpisode(p, tv.GetSeasons(), req)
-	}
-
-	return nil, fmt.Errorf("findTVChild: no season or episode information")
+	return nil, nil
 }
 
 // findTVSeasonOrEpisode finds a TV show season or episode based on the request information.
@@ -135,25 +151,4 @@ func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.Respons
 	}
 
 	return nil, fmt.Errorf("findTVEpisode: episode %s no match found", req.Query)
-}
-
-// seasonRegex is a compiled regular expression used to extract numeric values
-// from season directory names for season number detection.
-var seasonRegex = regexp.MustCompile(`[0-9]+`)
-
-// detectSeasonNumber tries to detect a season number from a directory name string.
-// It extracts all numeric sequences from the name and returns the last one as the season number.
-// This heuristic works for common season directory naming patterns like "Season 1", "S02", etc.
-func (g *generic) detectSeasonNumber(name string) (int, error) {
-	matches := seasonRegex.FindAllString(name, -1)
-	if len(matches) > 0 {
-		// Convert the last match to an integer.
-		seasonNumber, err := strconv.Atoi(matches[len(matches)-1])
-		if err != nil {
-			return -1, err
-		}
-		return seasonNumber, nil
-	}
-
-	return -1, nil
 }
