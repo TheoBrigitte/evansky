@@ -4,6 +4,8 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"net/http"
+	"os"
+	"path/filepath"
 	"time"
 
 	gotmdb "github.com/cyruzin/golang-tmdb"
@@ -22,12 +24,22 @@ func New(flags *pflag.FlagSet) (provider.Interface, error) {
 		return nil, fmt.Errorf("--%s is required", apiKeyFlag)
 	}
 
+	cd := cacheDir
+	if cd == "" {
+		dir, err := os.UserCacheDir()
+		if err != nil {
+			return nil, err
+		}
+		cd = filepath.Join(dir, defaultCacheDir)
+	}
+
 	tmdbClient, err := gotmdb.Init(apiKey)
 	if err != nil {
 		return nil, err
 	}
 	tmdbClient.SetClientConfig(newClient(&clientOptions{
-		ttl: cacheTTL,
+		cacheDir: cd,
+		ttl:      cacheTTL,
 	}))
 
 	c := &Client{
@@ -42,7 +54,8 @@ func (c *Client) Name() string {
 }
 
 type clientOptions struct {
-	ttl time.Duration
+	cacheDir string
+	ttl      time.Duration
 }
 
 // newClient returns a new http.Client with caching capabilities if ttl > 0.
@@ -54,7 +67,7 @@ func newClient(o *clientOptions) http.Client {
 		osFs := afero.NewOsFs()
 
 		// use baseFs to restrict access to a specific directory
-		baseFs := afero.NewBasePathFs(osFs, "/home/theo/projects/evansky/cache")
+		baseFs := afero.NewBasePathFs(osFs, o.cacheDir)
 
 		// use cacheFs to read the cached files from memory
 		cacheFs := afero.NewMemMapFs()
