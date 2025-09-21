@@ -43,6 +43,12 @@ type Options struct {
 	Output     string
 }
 
+type Entry struct {
+	Source      string
+	Destination string
+	Error       error
+}
+
 func New(paths []string, providers []provider.Interface, o Options) (Renamer, error) {
 	if len(paths) == 0 {
 		return nil, fmt.Errorf("at least one source is required")
@@ -99,11 +105,23 @@ func (r *renamer) Run(o source.Options) (err error) {
 		return nil
 	}
 
-	r.processNodes(nodes)
+	entries := []Entry{}
+	dirs := []string{}
+	for output, nodes := range nodes {
+		for _, n := range nodes {
+			entry, dir := r.generateEntry(n, output)
+			entries = append(entries, entry)
+			if dir != "" {
+				dirs = append(dirs, dir)
+			}
+		}
+	}
+	slices.Sort(dirs)
 
-	slog.Info("### starting renaming", "files", len(r.files), "directories", len(r.directories))
+	slog.Info("### starting renaming", "entries", len(entries))
 
-	for dir := range maps.Keys(r.directories) {
+	dirCount := 0
+	for _, dir := range slices.Compact(dirs) {
 		if r.o.Write {
 			err := os.MkdirAll(dir, 0750)
 			if err != nil {
@@ -111,38 +129,52 @@ func (r *renamer) Run(o source.Options) (err error) {
 			}
 		}
 		fmt.Printf("%s[new directory] -> [%s]\n", prefix, dir)
+		dirCount++
 	}
-	if len(r.directories) > 0 {
-		slog.Info("### directories created", "count", len(r.directories))
+	if dirCount > 0 {
+		slog.Info("### directories created", "count", dirCount)
 	}
 
-	for src, dst := range r.files {
-		realSrc := src
+	filesCount := 0
+	for _, e := range entries {
+		if e.Error != nil {
+			continue
+		}
+
+		realSrc := e.Source
 		if r.o.RenameMode == "symlink" {
-			realSrc, err = getSymlinkSrc(src, dst)
+			realSrc, err = getSymlinkSrc(e.Source, e.Destination)
 			if err != nil {
-				r.errors[src] = err
+				e.Error = err
 				continue
 			}
 		}
 
 		// Perform the write operation
-		err := r.write(realSrc, dst, w)
+		err := r.write(realSrc, e.Destination, w)
 		if err != nil {
-			r.errors[src] = err
+			e.Error = err
 			continue
 		}
-		fmt.Printf("%s[%s] -> [%s]\n", prefix, src, dst)
+
+		fmt.Printf("%s[%s] -> [%s]\n", prefix, e.Source, e.Destination)
+		filesCount++
 	}
-	if len(r.files) > 0 {
-		slog.Info("### files renamed", "count", len(r.files))
+	if filesCount > 0 {
+		slog.Info("### files renamed", "count", filesCount)
 	}
 
-	for src, err := range r.errors {
-		fmt.Printf("%s[%s] -> error: %s\n", prefix, src, err)
+	errorsCount := 0
+	for _, e := range entries {
+		if e.Error == nil {
+			continue
+		}
+
+		fmt.Printf("%s[%s] -> error: %s\n", prefix, e.Source, e.Error)
+		errorsCount++
 	}
-	if len(r.errors) > 0 {
-		slog.Warn("### errors encountered", "count", len(r.errors))
+	if errorsCount > 0 {
+		slog.Warn("### errors encountered", "count", errorsCount)
 	}
 
 	// TODO: handle non destructive renaming, keeping other files (subtitles, etc)
@@ -151,32 +183,14 @@ func (r *renamer) Run(o source.Options) (err error) {
 	return nil
 }
 
-func (r *renamer) processNodes(nodesOutput map[string][]source.Node) {
-	//w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-	//fmt.Fprintln(w, "Path\tName\tYear\tError\tType")
+func (r *renamer) generateEntry(node source.Node, output string) (e Entry, dir string) {
+	e.Source = node.Path
 
-	for output, nodes := range nodesOutput {
-		for _, n := range nodes {
-			if n.Error != nil {
-				r.errors[n.Path] = n.Error
-				continue
-			}
-
-			newPath, err := r.generateName(n, output)
-			if err != nil {
-				r.errors[n.Path] = err
-				continue
-			}
-			r.files[n.Path] = newPath
-
-			//fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%T\n", n.Path, name, year, errMsg, n.Response)
-		}
+	if node.Error != nil {
+		e.Error = node.Error
+		return
 	}
 
-	//w.Flush()
-}
-
-func (r *renamer) generateName(node source.Node, output string) (string, error) {
 	components := []string{}
 	switch resp := node.Response.(type) {
 	case provider.ResponseMovie:
@@ -188,10 +202,12 @@ func (r *renamer) generateName(node source.Node, output string) (string, error) 
 	case provider.ResponseTVEpisode:
 		components = r.o.Formatter.TVEpisode(resp)
 	default:
-		return "", fmt.Errorf("unknown type: %T", node.Response)
+		e.Error = fmt.Errorf("unknown type: %T", node.Response)
+		return
 	}
 	if len(components) == 0 {
-		return "", fmt.Errorf("no components")
+		e.Error = fmt.Errorf("no components")
+		return
 	}
 
 	var extension string
@@ -199,34 +215,37 @@ func (r *renamer) generateName(node source.Node, output string) (string, error) 
 		extension = filepath.Ext(node.Entry.Name())
 	}
 
-	var dir string
 	// Prepend output directory if specified
 	newPath := filepath.Join(append([]string{output}, components...)...)
 	newPathWithExt := filepath.Clean(fmt.Sprintf("%s%s", newPath, extension))
 	if node.Path == newPathWithExt {
-		return "", fmt.Errorf("source and destination are the same")
+		e.Error = fmt.Errorf("source and destination are the same")
+		return
 	}
 
 	if len(components) > 1 {
+		// Add directories to the list of directories to create
 		dir = filepath.Dir(newPathWithExt)
-		r.directories[dir] = struct{}{}
 	}
 
 	if _, exists := r.files[node.Path]; exists {
-		return "", fmt.Errorf("duplicate source path")
+		e.Error = fmt.Errorf("duplicate source path")
+		return
 	}
 
 	for i := 0; i <= deduplicationAttemptLimit; i++ {
 		exists := slices.Contains(slices.Collect(maps.Values(r.files)), newPathWithExt)
 		if !exists {
-			return newPathWithExt, nil
+			e.Destination = newPathWithExt
+			return
 		}
 
 		newPath = fmt.Sprintf("%s%s", newPath, deduplicationSuffix)
 		newPathWithExt = filepath.Clean(fmt.Sprintf("%s%s", newPath, extension))
 	}
 
-	return "", fmt.Errorf("could not deduplicate path")
+	e.Error = fmt.Errorf("could not deduplicate path")
+	return
 }
 
 type writer func(string, string) error
