@@ -9,3 +9,7 @@ type Info = parse.TorrentInfo
 func Parse(filename string) (*Info, error) {
 	return parse.Parse(filename)
 }
+
+func CleanTitle(title string) string {
+	return parse.CleanTitle(title)
+}

@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 
 	"github.com/TheoBrigitte/evansky/pkg/parser"
 	"github.com/TheoBrigitte/evansky/pkg/provider"
@@ -93,6 +94,13 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 
 		// Parent response
 		Response: parentResp,
+	}
+
+	if info.Year == 0 && info.Season == 0 && info.Episode == 0 {
+		// Parsing did not yield useful information, use the full name as query.
+		// This fixes an issue where some names are not parsed correctly.
+		req.Query = filepath.Base(parser.CleanTitle(entry.Name()))
+		req.Query = strings.TrimSuffix(req.Query, filepath.Ext(req.Query))
 	}
 
 	// Read directory entries early if it's a directory.
@@ -211,9 +219,9 @@ func (g *generic) find(p provider.Interface, req provider.Request) (provider.Res
 	if req.Response == nil {
 		// Processing a top level media (no previous response).
 
-		if req.Info.Title == "" {
+		if req.Query == "" {
 			// We need at least a title to search for top level media.
-			return nil, fmt.Errorf("find: no title")
+			return nil, fmt.Errorf("find: no query")
 		}
 
 		if req.Info.Season > 0 || req.Info.Episode > 0 {
@@ -253,7 +261,7 @@ func (g *generic) find(p provider.Interface, req provider.Request) (provider.Res
 			// Parent is a season, get the episode by number.
 			return r.GetEpisode(req.Info.Episode)
 		}
-		if req.Info.Title != "" {
+		if req.Query != "" {
 			// Parent is a season, search for episode by name.
 			//req = g.usePreviousLanguage(req)
 			return g.findTVEpisode(p, []provider.ResponseTVSeason{r}, req)
