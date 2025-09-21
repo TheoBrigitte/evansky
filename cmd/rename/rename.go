@@ -9,6 +9,7 @@ import (
 	"github.com/TheoBrigitte/evansky/pkg/provider/register"
 	"github.com/TheoBrigitte/evansky/pkg/renamer"
 	"github.com/TheoBrigitte/evansky/pkg/renamer/format"
+	"github.com/TheoBrigitte/evansky/pkg/source"
 
 	"github.com/spf13/cobra"
 )
@@ -23,6 +24,7 @@ var (
 	}
 
 	dryRun     bool
+	exclude    string
 	force      bool
 	language   string
 	output     string
@@ -32,6 +34,7 @@ var (
 
 func init() {
 	Cmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "n", true, "show what would be done only and do not rename anything")
+	Cmd.PersistentFlags().StringVar(&exclude, "exclude", "", "exclude files matching the given glob pattern")
 	Cmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "skip confirmation")
 	Cmd.PersistentFlags().StringVar(&language, "language", "en", "language used for destination names (ISO 639-1 code)")
 	Cmd.PersistentFlags().StringVarP(&output, "output", "o", "", "output directory (default: same as source)")
@@ -77,7 +80,11 @@ func runner(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	sourceOptions := source.Options{
+		ExcludeGlob: exclude,
+	}
+
 	slog.Info("start", "sources", len(args), "provider", len(providers))
 
-	return r.Run()
+	return r.Run(sourceOptions)
 }

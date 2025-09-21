@@ -7,10 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strconv"
-
-	"github.com/gogf/gf/v2/text/gstr"
+	"slices"
 
 	"github.com/TheoBrigitte/evansky/pkg/parser"
 	"github.com/TheoBrigitte/evansky/pkg/provider"
@@ -21,9 +18,10 @@ import (
 // It provides functionality to scan directory structures, parse media information,
 // and query metadata providers to generate nodes for renaming operations.
 type generic struct {
-	path    string  // Root path to scan for media files
-	newPath string  // Proposed new path (currently unused)
-	options Options // Configuration options for scanning behavior
+	path     string   // Root path to scan for media files
+	newPath  string   // Proposed new path (currently unused)
+	options  Options  // Configuration options for scanning behavior
+	excludes []string // List of files or directories to exclude based on glob patterns
 
 	providers []provider.Interface // List of metadata providers to query
 }
@@ -50,6 +48,14 @@ func (g *generic) scan() ([]Node, error) {
 		return nil, err
 	}
 	dirInfo := fs.FileInfoToDirEntry(info)
+
+	if g.options.ExcludeGlob != "" {
+		excludes, err := filepath.Glob(filepath.Join(g.path, g.options.ExcludeGlob))
+		if err != nil {
+			return nil, err
+		}
+		g.excludes = excludes
+	}
 
 	// Start walking the directory tree.
 	nodes, err := g.walk(g.path, dirInfo, nil)
@@ -96,6 +102,13 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 		dirs, err = os.ReadDir(path)
 		if err != nil {
 			return nil, err
+		}
+	} else {
+		shouldExclude := slices.Contains(g.excludes, path)
+		if shouldExclude {
+			slog.Info("excluding", "path", path)
+			// TODO: this might need better handling to avoid nil pointer dereference error
+			return nil, nil
 		}
 	}
 

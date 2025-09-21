@@ -20,7 +20,7 @@ var (
 )
 
 type Renamer interface {
-	Run() error
+	Run(source.Options) error
 }
 
 type renamer struct {
@@ -63,7 +63,7 @@ func New(paths []string, providers []provider.Interface, o Options) (Renamer, er
 	return r, nil
 }
 
-func (r *renamer) Run() (err error) {
+func (r *renamer) Run(o source.Options) (err error) {
 	prefix := ""
 	if !r.o.Write {
 		prefix = "[dry-run] "
@@ -78,8 +78,6 @@ func (r *renamer) Run() (err error) {
 	default:
 		return fmt.Errorf("unknown rename mode: %q", r.o.RenameMode)
 	}
-
-	o := source.Options{}
 
 	var nodes = make(map[string][]source.Node)
 	for _, path := range r.paths {
@@ -103,9 +101,8 @@ func (r *renamer) Run() (err error) {
 
 	r.processNodes(nodes)
 
-	if len(r.directories) > 0 {
-		slog.Info("### directories created", "count", len(r.directories))
-	}
+	slog.Info("### starting renaming", "files", len(r.files), "directories", len(r.directories))
+
 	for dir := range maps.Keys(r.directories) {
 		if r.o.Write {
 			err := os.MkdirAll(dir, 0750)
@@ -115,10 +112,10 @@ func (r *renamer) Run() (err error) {
 		}
 		fmt.Printf("%s[new directory] -> [%s]\n", prefix, dir)
 	}
-
-	if len(r.files) > 0 {
-		slog.Info("### files renamed", "count", len(r.files))
+	if len(r.directories) > 0 {
+		slog.Info("### directories created", "count", len(r.directories))
 	}
+
 	for src, dst := range r.files {
 		realSrc := src
 		if r.o.RenameMode == "symlink" {
@@ -137,12 +134,15 @@ func (r *renamer) Run() (err error) {
 		}
 		fmt.Printf("%s[%s] -> [%s]\n", prefix, src, dst)
 	}
-
-	if len(r.errors) > 0 {
-		slog.Warn("### errors encountered", "count", len(r.errors))
+	if len(r.files) > 0 {
+		slog.Info("### files renamed", "count", len(r.files))
 	}
+
 	for src, err := range r.errors {
 		fmt.Printf("%s[%s] -> error: %s\n", prefix, src, err)
+	}
+	if len(r.errors) > 0 {
+		slog.Warn("### errors encountered", "count", len(r.errors))
 	}
 
 	// TODO: handle non destructive renaming, keeping other files (subtitles, etc)
