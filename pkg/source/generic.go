@@ -208,7 +208,13 @@ func (g *generic) find(p provider.Interface, req provider.Request) (provider.Res
 		return g.searchByPopularity(p, req)
 	}
 
-	switch r := req.Response.(type) {
+	// Change language of the response to match the request language.
+	resp, err := req.Response.InLanguage(req)
+	if err != nil {
+		return nil, err
+	}
+
+	switch r := resp.(type) {
 	case provider.ResponseMovie:
 		// Parent response media is a movie, return it as is.
 		// TODO: go back if we detect a TV show from the new info.
@@ -224,7 +230,7 @@ func (g *generic) find(p provider.Interface, req provider.Request) (provider.Res
 	case provider.ResponseTVSeason:
 		if req.Info.Episode > 0 {
 			// Parent is a season, get the episode by number.
-			return r.GetEpisode(req.Info.Episode, req)
+			return r.GetEpisode(req.Info.Episode)
 		}
 		if req.Info.Title != "" {
 			// Parent is a season, search for episode by name.
@@ -299,14 +305,14 @@ func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req 
 		//req = g.usePreviousLanguage(req)
 
 		// Get season by number
-		season, err := tv.GetSeason(req.Info.Season, req)
+		season, err := tv.GetSeason(req.Info.Season)
 		if err != nil {
 			return nil, err
 		}
 
 		if req.Info.Episode > 0 {
 			// Season and episode number provided, get the episode
-			return season.GetEpisode(req.Info.Episode, req)
+			return season.GetEpisode(req.Info.Episode)
 		}
 
 		// Only season number provided, return the season
@@ -316,11 +322,7 @@ func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req 
 	if req.Info.Episode > 0 {
 		// Only episode number provided, search for episode across all seasons
 		//req = g.usePreviousLanguage(req)
-		seasons, err := tv.GetSeasons(req)
-		if err != nil {
-			return nil, err
-		}
-		return g.findTVEpisode(p, seasons, req)
+		return g.findTVEpisode(p, tv.GetSeasons(), req)
 	}
 
 	if req.Info.Title != "" {
@@ -335,16 +337,12 @@ func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req 
 
 			if seasonNumber > 0 {
 				// Season number detected, get the season
-				return tv.GetSeason(seasonNumber, req)
+				return tv.GetSeason(seasonNumber)
 			}
 		}
 
 		// Search for season or episode by name
-		seasons, err := tv.GetSeasons(req)
-		if err != nil {
-			return nil, err
-		}
-		return g.findTVSeasonOrEpisode(p, seasons, req)
+		return g.findTVSeasonOrEpisode(p, tv.GetSeasons(), req)
 	}
 
 	return nil, fmt.Errorf("findTVChild: no season or episode information")
@@ -367,12 +365,7 @@ func (g *generic) findTVSeasonOrEpisode(p provider.Interface, seasons []provider
 			bestMatch = season
 		}
 
-		episodes, err := season.GetEpisodes(req)
-		if err != nil {
-			slog.Warn("findTVSeasonOrEpisode: cannot get episodes", "showID", season.GetShow().GetID(), "season", season.GetSeasonNumber(), "error", err)
-			continue
-		}
-		for _, episode := range episodes {
+		for _, episode := range season.GetEpisodes() {
 			episodeScore := gstr.Levenshtein(req.Info.Title, episode.GetName(), 1, 1, 1)
 			if bestScore == -1 || episodeScore < bestScore {
 				bestScore = episodeScore
@@ -397,7 +390,7 @@ func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.Respons
 	if req.Info.Episode > 0 {
 		// Episode number provided, get the episode from the first season that has it.
 		for _, season := range seasons {
-			return season.GetEpisode(req.Info.Episode, req)
+			return season.GetEpisode(req.Info.Episode)
 		}
 
 		return nil, fmt.Errorf("findTVEpisode: episode %d not found", req.Info.Episode)
@@ -412,13 +405,7 @@ func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.Respons
 	var bestMatch provider.Response
 	var bestScore int = -1
 	for _, season := range seasons {
-		episodes, err := season.GetEpisodes(req)
-		if err != nil {
-			slog.Warn("findTVEpisode: cannot get episodes", "showID", season.GetShow().GetID(), "season", season.GetSeasonNumber(), "error", err)
-			continue
-		}
-
-		for _, episode := range episodes {
+		for _, episode := range season.GetEpisodes() {
 			episodeScore := gstr.Levenshtein(req.Info.Title, episode.GetName(), 1, 1, 1)
 			if bestScore == -1 || episodeScore < bestScore {
 				bestScore = episodeScore

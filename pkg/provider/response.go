@@ -9,6 +9,7 @@ type Response interface {
 	GetName() string
 	GetDate() time.Time
 	GetPopularity() int
+	InLanguage(Request) (Response, error)
 
 	ResponseBase
 }
@@ -22,8 +23,8 @@ type ResponseMovie interface {
 type ResponseTV interface {
 	Response
 
-	GetSeason(int, Request) (ResponseTVSeason, error)
-	GetSeasons(Request) ([]ResponseTVSeason, error)
+	GetSeason(int) (ResponseTVSeason, error)
+	GetSeasons() []ResponseTVSeason
 
 	ResponseBaseTV
 }
@@ -33,8 +34,8 @@ type ResponseTVSeason interface {
 
 	GetShow() ResponseTV
 	GetSeasonNumber() int
-	GetEpisode(int, Request) (ResponseTVEpisode, error)
-	GetEpisodes(Request) ([]ResponseTVEpisode, error)
+	GetEpisode(int) (ResponseTVEpisode, error)
+	GetEpisodes() []ResponseTVEpisode
 
 	ResponseBaseTVSeason
 }

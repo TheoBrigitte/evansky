@@ -9,51 +9,96 @@ import (
 )
 
 type tvEpisodeResponse struct {
-	provider.ResponseBaseTVEpisode
-	result gotmdb.TVEpisodeDetails
+	*tvEpisode
+	multi  map[string]*tvEpisode
+	client *gotmdb.Client
 
-	airDate time.Time
-	season  provider.ResponseTVSeason
-	client  *gotmdb.Client
+	provider.ResponseBaseTVEpisode
 }
 
-func (c *Client) newTVEpisodeResponse(result gotmdb.TVEpisodeDetails, season provider.ResponseTVSeason) (*tvEpisodeResponse, error) {
+type tvEpisode struct {
+	result  gotmdb.TVEpisodeDetails
+	airDate time.Time
+	season  provider.ResponseTVSeason
+}
+
+func (c *Client) newTVEpisodeResponse(result gotmdb.TVEpisodeDetails, season provider.ResponseTVSeason, lang string) (*tvEpisodeResponse, error) {
+	t, err := newTVEpisode(result, season)
+	if err != nil {
+		return nil, err
+	}
+
+	m := &tvEpisodeResponse{
+		tvEpisode:             t,
+		client:                c.client,
+		ResponseBaseTVEpisode: provider.NewResponseBaseTVEpisode(),
+	}
+	m.multi = map[string]*tvEpisode{
+		lang: m.tvEpisode,
+	}
+
+	return m, nil
+}
+
+func newTVEpisode(result gotmdb.TVEpisodeDetails, season provider.ResponseTVSeason) (*tvEpisode, error) {
 	// Parse the first air date in the format "2006-01-02"
 	airDate, err := time.Parse(time.DateOnly, result.AirDate)
 	if err != nil {
 		return nil, err
 	}
 
-	t := &tvEpisodeResponse{
-		ResponseBaseTVEpisode: provider.NewResponseBaseTVEpisode(),
-		result:                result,
-		airDate:               airDate,
-		season:                season,
-		client:                c.client,
+	t := &tvEpisode{
+		result:  result,
+		airDate: airDate,
+		season:  season,
 	}
+
 	return t, nil
 }
 
-func (r tvEpisodeResponse) GetID() int {
+func (r tvEpisode) GetID() int {
 	return int(r.result.ID)
 }
 
-func (r tvEpisodeResponse) GetName() string {
+func (r tvEpisode) GetName() string {
 	return r.result.Name
 }
 
-func (r tvEpisodeResponse) GetDate() time.Time {
+func (r tvEpisode) GetDate() time.Time {
 	return r.airDate
 }
 
-func (r tvEpisodeResponse) GetPopularity() int {
+func (r tvEpisode) GetPopularity() int {
 	return computePopularity(-1, r.result.VoteAverage, r.result.VoteCount)
 }
 
-func (r tvEpisodeResponse) GetEpisodeNumber() int {
+func (r tvEpisode) GetEpisodeNumber() int {
 	return r.result.EpisodeNumber
 }
 
-func (r tvEpisodeResponse) GetSeason() provider.ResponseTVSeason {
+func (r tvEpisode) GetSeason() provider.ResponseTVSeason {
 	return r.season
+}
+
+func (m *tvEpisodeResponse) InLanguage(req provider.Request) (provider.Response, error) {
+	if r, ok := m.multi[req.Language]; ok {
+		m.tvEpisode = r
+	} else {
+
+		languageQuery := buildLanguageQuery(req)
+		details, err := m.client.GetTVEpisodeDetails(m.GetSeason().GetShow().GetID(), m.GetSeason().GetSeasonNumber(), m.GetID(), languageQuery)
+		if err != nil {
+			return nil, err
+		}
+
+		e, err := newTVEpisode(*details, m.GetSeason())
+		if err != nil {
+			return nil, err
+		}
+
+		m.multi[req.Language] = e
+		m.tvEpisode = e
+	}
+
+	return m, nil
 }

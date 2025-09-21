@@ -20,7 +20,7 @@ func (c *Client) SearchMovie(req provider.Request) (provider.ResponseMovie, erro
 		return nil, provider.ErrNoResult
 	}
 
-	return c.newMovieResponse(movies.Results[0])
+	return c.newMovieResponse(movies.Results[0], req.Language)
 }
 
 // searchTV search for tv shows using query and year (if provided).
@@ -36,7 +36,7 @@ func (c *Client) SearchTV(req provider.Request) (provider.ResponseTV, error) {
 		return nil, provider.ErrNoResult
 	}
 
-	return c.newTVResponse(tvshows.Results[0])
+	return c.newTVResponse(tvshows.Results[0], req)
 }
 
 // searchMulti search for multi media using query.

@@ -11,98 +11,135 @@ import (
 )
 
 type tvResponse struct {
-	provider.ResponseBaseTV
+	*tv
+	multi  map[string]*tv
+	client *Client
 
+	provider.ResponseBaseTV
+}
+
+type tv struct {
 	result       gotmdb.TVShowResult
 	firstAirDate time.Time
 	// Language indexed seasons cache
-	seasons map[string][]provider.ResponseTVSeason
-
-	client *Client
+	seasons []provider.ResponseTVSeason
 }
 
-func (c *Client) newTVResponse(result gotmdb.TVShowResult) (*tvResponse, error) {
+func (c *Client) newTVResponse(result gotmdb.TVShowResult, req provider.Request) (*tvResponse, error) {
+	m := &tvResponse{
+		multi:          make(map[string]*tv),
+		client:         c,
+		ResponseBaseTV: provider.NewResponseBaseTV(),
+	}
+
+	err := m.init(result, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return m, nil
+}
+func (m *tvResponse) init(result gotmdb.TVShowResult, req provider.Request) error {
+	m.tv = &tv{
+		result: result,
+	}
+
 	// Parse the first air date in the format "2006-01-02"
 	firstAirDate, err := time.Parse(time.DateOnly, result.FirstAirDate)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	t := &tvResponse{
-		ResponseBaseTV: provider.NewResponseBaseTV(),
-
-		result:       result,
-		firstAirDate: firstAirDate,
-		seasons:      make(map[string][]provider.ResponseTVSeason),
-
-		client: c,
-	}
-	return t, nil
-}
-
-func (r tvResponse) GetID() int {
-	return int(r.result.ID)
-}
-
-func (r tvResponse) GetName() string {
-	return r.result.Name
-}
-
-func (r tvResponse) GetDate() time.Time {
-	return r.firstAirDate
-}
-
-func (r tvResponse) GetPopularity() int {
-	return computePopularity(r.result.Popularity, r.result.VoteAverage, r.result.VoteCount)
-}
-
-func (r tvResponse) GetSeasons(req provider.Request) ([]provider.ResponseTVSeason, error) {
-	slog.Debug("get seasons", "show_id", r.GetID(), "language", req.Language)
-	if s, ok := r.seasons[req.Language]; ok {
-		return s, nil
-	}
+	m.tv.firstAirDate = firstAirDate
 
 	languageQuery := buildLanguageQuery(req)
-	resp, err := r.client.client.GetTVDetails(r.GetID(), languageQuery)
+	resp, err := m.client.client.GetTVDetails(m.GetID(), languageQuery)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	seasons := make([]provider.ResponseTVSeason, 0, len(resp.Seasons))
 	for _, s := range resp.Seasons {
-		season, err := r.client.client.GetTVSeasonDetails(r.GetID(), s.SeasonNumber, languageQuery)
+		season, err := m.client.client.GetTVSeasonDetails(m.GetID(), s.SeasonNumber, languageQuery)
 		if err != nil {
-			slog.Warn("GetSeasons: failed to get season details", "show_id", r.GetID(), "season_number", s.SeasonNumber, "error", err)
-			continue
+			return err
 		}
-		r, err := r.client.newTVSeasonResponse(*season, r)
+
+		r, err := m.client.newTVSeasonResponse(*season, m, req)
 		if err != nil {
-			continue
+			return err
 		}
 		seasons = append(seasons, r)
 	}
+	m.tv.seasons = seasons
+	slog.Debug("tv show seasons loaded", "show_id", m.GetID(), "seasons", len(m.seasons))
+	m.multi[req.Language] = m.tv
 
-	if len(seasons) == 0 {
-		return nil, fmt.Errorf("no season found for show %d", r.GetID())
-	}
-
-	r.seasons[req.Language] = seasons
-
-	return seasons, nil
+	return nil
 }
 
-func (r tvResponse) GetSeason(seasonNumber int, req provider.Request) (provider.ResponseTVSeason, error) {
-	slog.Debug("get season", "show_id", r.GetID(), "season_number", seasonNumber, "language", req.Language)
-	seasons, err := r.GetSeasons(req)
-	if err != nil {
-		return nil, err
-	}
+func (r tv) GetID() int {
+	return int(r.result.ID)
+}
 
-	for _, s := range seasons {
+func (r tv) GetName() string {
+	return r.result.Name
+}
+
+func (r tv) GetDate() time.Time {
+	return r.firstAirDate
+}
+
+func (r tv) GetPopularity() int {
+	return computePopularity(r.result.Popularity, r.result.VoteAverage, r.result.VoteCount)
+}
+
+func (r *tv) GetSeasons() []provider.ResponseTVSeason {
+	slog.Debug("get seasons", "show_id", r.GetID(), "seasons", len(r.seasons))
+	return r.seasons
+}
+
+func (r tv) GetSeason(seasonNumber int) (provider.ResponseTVSeason, error) {
+	slog.Debug("get season", "show_id", r.GetID(), "season_number", seasonNumber)
+
+	for _, s := range r.GetSeasons() {
 		if s.GetSeasonNumber() == seasonNumber {
 			return s, nil
 		}
 	}
 
 	return nil, fmt.Errorf("season %d not found for show %d", seasonNumber, r.GetID())
+}
+
+func (m *tvResponse) InLanguage(req provider.Request) (provider.Response, error) {
+	if r, ok := m.multi[req.Language]; ok {
+		m.tv = r
+	} else {
+
+		languageQuery := buildLanguageQuery(req)
+		details, err := m.client.client.GetTVDetails(m.GetID(), languageQuery)
+		if err != nil {
+			return nil, err
+		}
+
+		result := gotmdb.TVShowResult{
+			ID:               details.ID,
+			Name:             details.Name,
+			OriginalName:     details.OriginalName,
+			OriginalLanguage: details.OriginalLanguage,
+			Overview:         details.Overview,
+			FirstAirDate:     details.FirstAirDate,
+			PosterPath:       details.PosterPath,
+			BackdropPath:     details.BackdropPath,
+			Popularity:       details.Popularity,
+			OriginCountry:    details.OriginCountry,
+			VoteMetrics:      details.VoteMetrics,
+		}
+
+		err = m.init(result, req)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return m, nil
 }
