@@ -4,6 +4,7 @@ go 1.25
 
 require (
 	github.com/abadojack/whatlanggo v1.0.1
+	github.com/adrg/strutil v0.3.1
 	github.com/cyruzin/golang-tmdb v1.8.2
 	github.com/docker/go-units v0.5.0
 	github.com/gogf/gf/v2 v2.9.3

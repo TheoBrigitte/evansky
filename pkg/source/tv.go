@@ -6,8 +6,6 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/gogf/gf/v2/text/gstr"
-
 	"github.com/TheoBrigitte/evansky/pkg/provider"
 )
 
@@ -67,25 +65,25 @@ func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req 
 }
 
 // findTVSeasonOrEpisode finds a TV show season or episode based on the request information.
-// It uses Levenshtein distance to find the best match among all seasons and episodes,
+// It finds the best match among all seasons and episodes, by
 // comparing the request title against season names and episode names.
 func (g *generic) findTVSeasonOrEpisode(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request) (provider.Response, error) {
 	slog.Debug("find season or episode by name", "seasons", len(seasons), "title", req.Query, "season", req.Info.Season, "episode", req.Info.Episode)
 
-	// Search for season or episode by name using Levenshtein distance to find the best match.
+	// Search for season or episode by name using.
 	var bestMatch provider.Response
-	var bestScore int = -1
+	var bestScore float64 = -1
 	//seasons := make([]gotmdb.TVSeason, 0, len(show.Seasons))
 	for _, season := range seasons {
-		seasonScore := gstr.Levenshtein(req.Query, season.GetName(), 1, 1, 1)
-		if bestScore == -1 || seasonScore < bestScore {
+		isBetter, seasonScore := betterMatch(req.Query, season.GetName(), bestScore)
+		if isBetter {
 			bestScore = seasonScore
 			bestMatch = season
 		}
 
 		for _, episode := range season.GetEpisodes() {
-			episodeScore := gstr.Levenshtein(req.Query, episode.GetName(), 1, 1, 1)
-			if bestScore == -1 || episodeScore < bestScore {
+			isBetter, episodeScore := betterMatch(req.Query, episode.GetName(), bestScore)
+			if isBetter {
 				bestScore = episodeScore
 				bestMatch = episode
 			}
@@ -102,7 +100,7 @@ func (g *generic) findTVSeasonOrEpisode(p provider.Interface, seasons []provider
 // findTVEpisode finds a TV show episode based on the request information.
 // It handles two scenarios:
 // - Episode number provided: searches for the episode by number across seasons
-// - Episode title provided: uses Levenshtein distance to find the best matching episode name
+// - Episode title provided: find the best matching episode name
 func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request) (provider.Response, error) {
 	slog.Debug("find episode", "seasons", len(seasons), "title", req.Query, "season", req.Info.Season, "episode", req.Info.Episode)
 	if req.Info.Episode > 0 {
@@ -119,13 +117,13 @@ func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.Respons
 		return nil, fmt.Errorf("findTVEpisode: no episode information")
 	}
 
-	// Search for episode by name using Levenshtein distance to find the best match.
+	// Search for episode by finding the best match.
 	var bestMatch provider.Response
-	var bestScore int = -1
+	var bestScore float64 = -1
 	for _, season := range seasons {
 		for _, episode := range season.GetEpisodes() {
-			episodeScore := gstr.Levenshtein(req.Query, episode.GetName(), 1, 1, 1)
-			if bestScore == -1 || episodeScore < bestScore {
+			isBetter, episodeScore := betterMatch(req.Query, episode.GetName(), bestScore)
+			if isBetter {
 				bestScore = episodeScore
 				bestMatch = episode
 			}
