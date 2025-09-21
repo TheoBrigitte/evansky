@@ -110,8 +110,16 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 	// Query the providers with the parsed information.
 	resp, err := g.Find(req)
 	if err != nil {
+		n := Node{
+			Entry: entry,
+			Error: err,
+			Path:  path,
+			Info:  *info,
+		}
+		//slog.Info("found", "old", n.PathOld, "new", n.PathNew)
+
 		slog.Error("processed", "error", err, "path", path)
-		return nil, nil
+		return []Node{n}, nil
 	}
 	slog.Info("found", "name", resp.GetName(), "year", resp.GetDate().Year(), "type", fmt.Sprintf("%T", resp))
 	//slog.Debug("processed", "response", resp, "path", path)

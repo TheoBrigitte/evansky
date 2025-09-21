@@ -24,6 +24,7 @@ type Source interface {
 // metadata retrieved from providers.
 type Node struct {
 	Entry    fs.DirEntry
+	Error    error
 	Info     parser.Info
 	Path     string
 	Response provider.Response
