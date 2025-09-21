@@ -152,11 +152,21 @@ func (r *renamer) generateName(node source.Node, output string) (string, error) 
 		return "", fmt.Errorf("no components")
 	}
 
+	var extension string
+	if !node.Entry.IsDir() {
+		extension = filepath.Ext(node.Entry.Name())
+	}
+
 	var dir string
 	// Prepend output directory if specified
 	newPath := filepath.Join(append([]string{output}, components...)...)
+	newPathWithExt := filepath.Clean(fmt.Sprintf("%s%s", newPath, extension))
+	if node.Path == newPathWithExt {
+		return "", fmt.Errorf("source and destination are the same")
+	}
+
 	if len(components) > 1 {
-		dir = filepath.Dir(newPath)
+		dir = filepath.Dir(newPathWithExt)
 		r.directories[dir] = struct{}{}
 	}
 
@@ -165,12 +175,13 @@ func (r *renamer) generateName(node source.Node, output string) (string, error) 
 	}
 
 	for i := 0; i <= deduplicationAttemptLimit; i++ {
-		exists := slices.Contains(slices.Collect(maps.Values(r.files)), newPath)
+		exists := slices.Contains(slices.Collect(maps.Values(r.files)), newPathWithExt)
 		if !exists {
-			return newPath, nil
+			return newPathWithExt, nil
 		}
 
 		newPath = fmt.Sprintf("%s%s", newPath, deduplicationSuffix)
+		newPathWithExt = filepath.Clean(fmt.Sprintf("%s%s", newPath, extension))
 	}
 
 	return "", fmt.Errorf("could not deduplicate path")
