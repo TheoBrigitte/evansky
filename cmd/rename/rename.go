@@ -20,15 +20,17 @@ var (
 		Args:  cobra.MinimumNArgs(1),
 	}
 
-	dryRun   bool
-	force    bool
-	language string
+	dryRun     bool
+	force      bool
+	language   string
+	renameMode string
 )
 
 func init() {
-	Cmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "n", false, "do not change anything")
+	Cmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "n", true, "show what would be done only and do not rename anything")
 	Cmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "skip confirmation")
 	Cmd.PersistentFlags().StringVar(&language, "language", "en", "language used for destination names (ISO 639-1 code)")
+	Cmd.PersistentFlags().StringVar(&renameMode, "mode", "symlink", "rename mode: symlink, hardlink, copy, move")
 
 	register.Initialize(Cmd)
 }
@@ -45,7 +47,12 @@ func runner(cmd *cobra.Command, args []string) error {
 
 	formatter := format.NewJellyfinFormatter()
 
-	r, err := renamer.New(args, providers, formatter)
+	renameOptions := renamer.Options{
+		DryRun:     dryRun,
+		Formatter:  formatter,
+		RenameMode: renameMode,
+	}
+	r, err := renamer.New(args, providers, renameOptions)
 	if err != nil {
 		return err
 	}
