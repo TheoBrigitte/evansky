@@ -3,6 +3,8 @@ package rename
 import (
 	"fmt"
 	"log/slog"
+	"os"
+	"path/filepath"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider/register"
 	"github.com/TheoBrigitte/evansky/pkg/renamer"
@@ -23,6 +25,7 @@ var (
 	dryRun     bool
 	force      bool
 	language   string
+	output     string
 	renameMode string
 )
 
@@ -30,6 +33,7 @@ func init() {
 	Cmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "n", true, "show what would be done only and do not rename anything")
 	Cmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "skip confirmation")
 	Cmd.PersistentFlags().StringVar(&language, "language", "en", "language used for destination names (ISO 639-1 code)")
+	Cmd.PersistentFlags().StringVarP(&output, "output", "o", "", "output directory (default: same as source)")
 	Cmd.PersistentFlags().StringVar(&renameMode, "mode", "symlink", "rename mode: symlink, hardlink, copy, move")
 
 	register.Initialize(Cmd)
@@ -47,10 +51,22 @@ func runner(cmd *cobra.Command, args []string) error {
 
 	formatter := format.NewJellyfinFormatter()
 
+	if output != "" {
+		info, err := os.Lstat(output)
+		if err != nil && !os.IsNotExist(err) {
+			return err
+		}
+		if err == nil && !info.IsDir() {
+			return fmt.Errorf("output %q is not a directory", output)
+		}
+		output = filepath.Clean(output)
+	}
+
 	renameOptions := renamer.Options{
 		DryRun:     dryRun,
 		Formatter:  formatter,
 		RenameMode: renameMode,
+		Output:     output,
 	}
 	r, err := renamer.New(args, providers, renameOptions)
 	if err != nil {

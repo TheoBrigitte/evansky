@@ -69,14 +69,19 @@ func (r *renamer) Run(dryRun, force bool) error {
 
 	o := source.Options{}
 
-	var nodes []source.Node
+	var nodes = make(map[string][]source.Node)
 	for _, path := range r.paths {
+		output := r.o.Output
+		if output == "" {
+			output = filepath.Dir(filepath.Clean(path))
+		}
+
 		n, err := source.Scan(path, r.providers, o)
 		if err != nil {
 			slog.Error("scan failed", "path", path, "error", err)
 			continue
 		}
-		nodes = append(nodes, n...)
+		nodes[output] = append(nodes[output], n...)
 	}
 
 	if len(nodes) == 0 {
@@ -104,30 +109,32 @@ func (r *renamer) Run(dryRun, force bool) error {
 	return nil
 }
 
-func (r *renamer) processNodes(nodes []source.Node) {
+func (r *renamer) processNodes(nodesOutput map[string][]source.Node) {
 	//w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 	//fmt.Fprintln(w, "Path\tName\tYear\tError\tType")
 
-	for _, n := range nodes {
-		if n.Error != nil {
-			r.filesError[n.Path] = n.Error
-			continue
-		}
+	for output, nodes := range nodesOutput {
+		for _, n := range nodes {
+			if n.Error != nil {
+				r.filesError[n.Path] = n.Error
+				continue
+			}
 
-		newPath, err := r.generateName(n)
-		if err != nil {
-			r.filesError[n.Path] = err
-			continue
-		}
-		r.files[n.Path] = newPath
+			newPath, err := r.generateName(n, output)
+			if err != nil {
+				r.filesError[n.Path] = err
+				continue
+			}
+			r.files[n.Path] = newPath
 
-		//fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%T\n", n.Path, name, year, errMsg, n.Response)
+			//fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%T\n", n.Path, name, year, errMsg, n.Response)
+		}
 	}
 
 	//w.Flush()
 }
 
-func (r *renamer) generateName(node source.Node) (string, error) {
+func (r *renamer) generateName(node source.Node, output string) (string, error) {
 	components := []string{}
 	switch resp := node.Response.(type) {
 	case provider.ResponseMovie:
@@ -146,7 +153,8 @@ func (r *renamer) generateName(node source.Node) (string, error) {
 	}
 
 	var dir string
-	newPath := filepath.Join(components...)
+	// Prepend output directory if specified
+	newPath := filepath.Join(append([]string{output}, components...)...)
 	if len(components) > 1 {
 		dir = filepath.Dir(newPath)
 		r.directories[dir] = struct{}{}
