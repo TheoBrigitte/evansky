@@ -101,8 +101,15 @@ func Parse(filename string) (*TorrentInfo, error) {
 	}
 	raw := parts[0]
 
+	// Set title
+	setField(tor, "title", raw, CleanTitle(raw))
+
+	return tor, nil
+}
+
+func CleanTitle(raw string) string {
 	// Remove leading and trailing spaces and dashes
-	cleanName = strings.Trim(raw, " -")
+	cleanName := strings.Trim(raw, " -")
 
 	if strings.ContainsRune(cleanName, '.') && !strings.ContainsRune(cleanName, ' ') {
 		// If there are dots but no spaces, replace dots with spaces
@@ -117,8 +124,5 @@ func Parse(filename string) (*TorrentInfo, error) {
 
 	//cleanName = re.sub('([\[\(_]|- )$', '', cleanName).strip()
 
-	// Set title
-	setField(tor, "title", raw, strings.TrimSpace(cleanName))
-
-	return tor, nil
+	return strings.TrimSpace(cleanName)
 }
