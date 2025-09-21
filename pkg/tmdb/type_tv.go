@@ -94,12 +94,12 @@ func (r tv) GetPopularity() int {
 }
 
 func (r *tv) GetSeasons() []provider.ResponseTVSeason {
-	slog.Debug("get seasons", "show_id", r.GetID(), "seasons", len(r.seasons))
+	//slog.Debug("get seasons", "show_id", r.GetID(), "seasons", len(r.seasons))
 	return r.seasons
 }
 
 func (r tv) GetSeason(seasonNumber int) (provider.ResponseTVSeason, error) {
-	slog.Debug("get season", "show_id", r.GetID(), "season_number", seasonNumber)
+	//slog.Debug("get season", "show_id", r.GetID(), "season_number", seasonNumber)
 
 	for _, s := range r.GetSeasons() {
 		if s.GetSeasonNumber() == seasonNumber {

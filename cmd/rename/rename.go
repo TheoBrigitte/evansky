@@ -6,6 +6,7 @@ import (
 
 	"github.com/TheoBrigitte/evansky/pkg/provider/register"
 	"github.com/TheoBrigitte/evansky/pkg/renamer"
+	"github.com/TheoBrigitte/evansky/pkg/renamer/format"
 
 	"github.com/spf13/cobra"
 )
@@ -42,7 +43,9 @@ func runner(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	r, err := renamer.New(args, providers)
+	formatter := format.NewJellyfinFormatter()
+
+	r, err := renamer.New(args, providers, formatter)
 	if err != nil {
 		return err
 	}
