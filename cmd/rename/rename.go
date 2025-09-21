@@ -27,6 +27,7 @@ var (
 	language   string
 	output     string
 	renameMode string
+	write      bool
 )
 
 func init() {
@@ -35,6 +36,7 @@ func init() {
 	Cmd.PersistentFlags().StringVar(&language, "language", "en", "language used for destination names (ISO 639-1 code)")
 	Cmd.PersistentFlags().StringVarP(&output, "output", "o", "", "output directory (default: same as source)")
 	Cmd.PersistentFlags().StringVar(&renameMode, "mode", "symlink", "rename mode: symlink, hardlink, copy, move")
+	Cmd.PersistentFlags().BoolVar(&write, "write", false, "actually perform the rename operation (default: false)")
 
 	register.Initialize(Cmd)
 }
@@ -63,10 +65,12 @@ func runner(cmd *cobra.Command, args []string) error {
 	}
 
 	renameOptions := renamer.Options{
-		DryRun:     dryRun,
 		Formatter:  formatter,
 		RenameMode: renameMode,
 		Output:     output,
+	}
+	if !dryRun || write {
+		renameOptions.Write = true
 	}
 	r, err := renamer.New(args, providers, renameOptions)
 	if err != nil {
@@ -75,5 +79,5 @@ func runner(cmd *cobra.Command, args []string) error {
 
 	slog.Info("start", "sources", len(args), "provider", len(providers))
 
-	return r.Run(dryRun, force)
+	return r.Run()
 }

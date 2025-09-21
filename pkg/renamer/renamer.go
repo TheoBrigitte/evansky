@@ -2,8 +2,10 @@ package renamer
 
 import (
 	"fmt"
+	"io"
 	"log/slog"
 	"maps"
+	"os"
 	"path/filepath"
 	"slices"
 
@@ -18,7 +20,7 @@ var (
 )
 
 type Renamer interface {
-	Run(dryRun, force bool) error
+	Run() error
 }
 
 type renamer struct {
@@ -26,8 +28,8 @@ type renamer struct {
 	directories map[string]struct{}
 
 	// List of files to create (source -> destination)
-	files      map[string]string
-	filesError map[string]error
+	files  map[string]string
+	errors map[string]error
 
 	o         Options
 	paths     []string
@@ -35,7 +37,7 @@ type renamer struct {
 }
 
 type Options struct {
-	DryRun     bool
+	Write      bool
 	Formatter  format.Formatter
 	RenameMode string
 	Output     string
@@ -52,7 +54,7 @@ func New(paths []string, providers []provider.Interface, o Options) (Renamer, er
 	r := &renamer{
 		directories: make(map[string]struct{}),
 		files:       make(map[string]string),
-		filesError:  make(map[string]error),
+		errors:      make(map[string]error),
 		o:           o,
 		paths:       paths,
 		providers:   providers,
@@ -61,10 +63,20 @@ func New(paths []string, providers []provider.Interface, o Options) (Renamer, er
 	return r, nil
 }
 
-func (r *renamer) Run(dryRun, force bool) error {
+func (r *renamer) Run() (err error) {
 	prefix := ""
-	if dryRun {
+	if !r.o.Write {
 		prefix = "[dry-run] "
+	}
+
+	var w writer
+	switch r.o.RenameMode {
+	case "symlink":
+		w = os.Symlink
+	case "copy":
+		w = copyFile
+	default:
+		return fmt.Errorf("unknown rename mode: %q", r.o.RenameMode)
 	}
 
 	o := source.Options{}
@@ -91,15 +103,43 @@ func (r *renamer) Run(dryRun, force bool) error {
 
 	r.processNodes(nodes)
 
+	if len(r.directories) > 0 {
+		slog.Info("### directories created", "count", len(r.directories))
+	}
 	for dir := range maps.Keys(r.directories) {
+		if r.o.Write {
+			err := os.MkdirAll(dir, 0750)
+			if err != nil {
+				return fmt.Errorf("failed to create directory %q: %w", dir, err)
+			}
+		}
 		fmt.Printf("%s[new directory] -> [%s]\n", prefix, dir)
 	}
 
+	if len(r.files) > 0 {
+		slog.Info("### files renamed", "count", len(r.files))
+	}
 	for src, dst := range r.files {
+		realSrc := src
+		if r.o.RenameMode == "symlink" {
+			realSrc, err = filepath.Rel(filepath.Dir(dst), src)
+			if err != nil {
+				r.errors[src] = err
+				continue
+			}
+		}
+		err := r.write(realSrc, dst, w)
+		if err != nil {
+			r.errors[src] = err
+			continue
+		}
 		fmt.Printf("%s[%s] -> [%s]\n", prefix, src, dst)
 	}
 
-	for src, err := range r.filesError {
+	if len(r.errors) > 0 {
+		slog.Warn("### errors encountered", "count", len(r.errors))
+	}
+	for src, err := range r.errors {
 		fmt.Printf("%s[%s] -> error: %s\n", prefix, src, err)
 	}
 
@@ -116,13 +156,13 @@ func (r *renamer) processNodes(nodesOutput map[string][]source.Node) {
 	for output, nodes := range nodesOutput {
 		for _, n := range nodes {
 			if n.Error != nil {
-				r.filesError[n.Path] = n.Error
+				r.errors[n.Path] = n.Error
 				continue
 			}
 
 			newPath, err := r.generateName(n, output)
 			if err != nil {
-				r.filesError[n.Path] = err
+				r.errors[n.Path] = err
 				continue
 			}
 			r.files[n.Path] = newPath
@@ -185,4 +225,39 @@ func (r *renamer) generateName(node source.Node, output string) (string, error) 
 	}
 
 	return "", fmt.Errorf("could not deduplicate path")
+}
+
+type writer func(string, string) error
+
+func (r *renamer) write(src, dst string, fn writer) error {
+	if !r.o.Write || fn == nil {
+		return nil
+	}
+
+	return fn(src, dst)
+}
+
+func copyFile(src, dst string) error {
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+	_, err = io.Copy(destination, source)
+	return err
 }
