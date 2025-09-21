@@ -125,7 +125,7 @@ func (r tvSeason) GetEpisode(episodeNumber int) (provider.ResponseTVEpisode, err
 		}
 	}
 
-	return nil, fmt.Errorf("episode %d not found in season %d of show %d", episodeNumber, r.result.SeasonNumber, r.show.GetID())
+	return nil, fmt.Errorf("%w for episode %d in season %d of show %d", provider.ErrNoResult, episodeNumber, r.result.SeasonNumber, r.show.GetID())
 }
 
 func (m *tvSeasonResponse) InLanguage(req provider.Request) (provider.Response, error) {

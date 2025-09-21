@@ -31,15 +31,17 @@ func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req 
 			if err != nil {
 				slog.Warn("findTVChild: cannot detect season number", "title", req.Query, "error", err)
 			}
-
+			req.Info.Season = seasonNumber
 		} else {
 			// Try to detect episode number from directory name
 			episodeNumber, err := extractNumber(req.Query, episodeRegex)
 			if err != nil {
 				slog.Warn("findTVChild: cannot detect episode number", "title", req.Query, "error", err)
 			}
+			req.Info.Episode = episodeNumber
+			req.Info.Season = -1 // Invalidate season number if episode number is detected
 		}
-		if seasonNumber > 0 || episodeNumber > 0 {
+		if req.Info.Season > 0 || req.Info.Episode > 0 {
 			return g.findTVChildWithNumber(p, tv, req)
 		}
 
@@ -120,12 +122,11 @@ func (g *generic) findTVSeasonOrEpisode(p provider.Interface, seasons []provider
 func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request) (provider.Response, error) {
 	slog.Debug("find episode", "seasons", len(seasons), "title", req.Query, "season", req.Info.Season, "episode", req.Info.Episode)
 	if req.Info.Episode > 0 {
-		// Episode number provided, get the episode from the first season that has it.
-		for _, season := range seasons {
-			return season.GetEpisode(req.Info.Episode)
+		if req.Info.Season < 0 {
+			// Season number is invalid, try absolute numbering
+			return g.findTVEpisodeAbsoluteNumber(p, seasons, req)
 		}
-
-		return nil, fmt.Errorf("findTVEpisode: episode %d not found", req.Info.Episode)
+		return g.findTVEpisodeInSeasons(p, seasons, req)
 	}
 
 	if req.Query == "" {
@@ -151,4 +152,51 @@ func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.Respons
 	}
 
 	return nil, fmt.Errorf("findTVEpisode: episode %s no match found", req.Query)
+}
+
+func (g *generic) findTVEpisodeInSeasons(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request) (provider.Response, error) {
+	// Episode number provided, get the episode from the first season that has it.
+	for _, season := range seasons {
+		// Try to get the episode from this season
+		resp, err := season.GetEpisode(req.Info.Episode)
+		if err != nil && errors.Is(err, provider.ErrNoResult) {
+			continue
+		}
+		if resp != nil {
+			return resp, nil
+		}
+	}
+
+	return nil, fmt.Errorf("findTVEpisode: episode %d not found", req.Info.Episode)
+}
+
+func (g *generic) findTVEpisodeAbsoluteNumber(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request) (provider.Response, error) {
+	var absoluteNumber int = 0
+	for _, season := range seasons {
+		if season.GetSeasonNumber() == 0 {
+			// Skip season 0 (specials) for absolute numbering
+			slog.Debug("skip season 0 for absolute numbering")
+			continue
+		}
+
+		episodes := season.GetEpisodes()
+		slog.Debug("checking season for absolute numbering", "season", season.GetSeasonNumber(), "episodes", len(episodes), "current_absolute", absoluteNumber, "target_episode", req.Info.Episode)
+		if (len(episodes) + absoluteNumber) < req.Info.Episode {
+			// Not enough episodes in this season, don't bother looking inside
+			absoluteNumber += len(episodes)
+			continue
+		}
+
+		for _, episode := range episodes {
+			absoluteNumber++
+			if absoluteNumber == req.Info.Episode {
+				return episode, nil
+			}
+		}
+
+		// This season should have been enough, but we didn't find the episode
+		break
+	}
+
+	return nil, fmt.Errorf("findTVEpisodeAbsoluteNumber: episode %d not found", req.Info.Episode)
 }
