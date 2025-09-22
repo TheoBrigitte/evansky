@@ -21,8 +21,11 @@ var patterns = []struct {
 	{"season", false, reflect.Int, regexp.MustCompile(`(?i)(s([0-9]{1,}))e`)},
 	// Season in 1x01 format (case insensitive)
 	{"season", false, reflect.Int, regexp.MustCompile(`(?i)(([0-9]{1,}))x`)},
+	// Episode in 1x01 format (case insensitive)
 	{"episode", false, reflect.Int, regexp.MustCompile(`(?i)([x]([0-9]{2})(?:[^0-9]|$))`)},
+	// Episode in S01E01 format (case insensitive)
 	{"episode", false, reflect.Int, regexp.MustCompile(`(?i)([e]([0-9]{2,})(?:[^0-9]|$))`)},
+	// Episode in - 01 format (case insensitive)
 	{"episode", false, reflect.Int, regexp.MustCompile(`(-\s+([0-9]{1,})(?:[^0-9]|$))`)},
 	// Years from 1900 to 2099
 	{"year", true, reflect.Int, regexp.MustCompile(`\b(((?:19[0-9]|20[0-9])[0-9]))\b`)},
