@@ -21,7 +21,10 @@ import (
 func New(flags *pflag.FlagSet) (provider.Interface, error) {
 	// Validate api key early to catch error before Init.
 	if apiKey == "" {
-		return nil, fmt.Errorf("--%s is required", apiKeyFlag)
+		apiKey = os.Getenv(apiKeyEnvVar)
+		if apiKey == "" {
+			return nil, fmt.Errorf("TMDB Api Key is required, set it either via --%s flag or %s environment variable", apiKeyFlag, apiKeyEnvVar)
+		}
 	}
 
 	cd := cacheDir

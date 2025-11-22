@@ -16,17 +16,20 @@ const (
 
 // Flag variables
 var (
-	apiKey   string
-	cacheTTL time.Duration
+	apiKey       string
+	apiKeyEnvVar string
+	cacheTTL     time.Duration
 
-	apiKeyFlag = "tmdb-api-key"
-	cacheDir   string
+	apiKeyFlag       = "tmdb-api-key"
+	apiKeyEnvVarFlag = "tmdb-api-key-env-var"
+	cacheDir         string
 )
 
 // Provider returns the tmdb provider with its flags
 func Provider() provider.Provider {
 	flags := pflag.NewFlagSet(name, pflag.ExitOnError)
 	flags.StringVar(&apiKey, apiKeyFlag, "", "tmdb api key")
+	flags.StringVar(&apiKeyEnvVar, apiKeyEnvVarFlag, "TMDB_API_KEY", "tmdb api key environment variable name")
 	flags.StringVar(&cacheDir, "tmdb-cache-dir", "", "cache directory (default: $XDG_CACHE_HOME/evansky/tmdb or $HOME/.cache/evansky/tmdb)")
 	flags.DurationVar(&cacheTTL, "tmdb-client-cache-ttl", 60*time.Second, "tmdb http client cache ttl, 0 to disable")
 
