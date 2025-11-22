@@ -39,17 +39,21 @@ func (c *Client) newTVResponse(result gotmdb.TVShowResult, req provider.Request)
 
 	return m, nil
 }
+
 func (m *tvResponse) init(result gotmdb.TVShowResult, req provider.Request) error {
 	m.tv = &tv{
 		result: result,
 	}
 
-	// Parse the first air date in the format "2006-01-02"
-	firstAirDate, err := time.Parse(time.DateOnly, result.FirstAirDate)
-	if err != nil {
-		return err
+	if result.FirstAirDate != "" {
+		slog.Debug("parsing tv first air date", "date", result.FirstAirDate)
+		// Parse the first air date in the format "2006-01-02"
+		firstAirDate, err := time.Parse(time.DateOnly, result.FirstAirDate)
+		if err != nil {
+			return err
+		}
+		m.tv.firstAirDate = firstAirDate
 	}
-	m.tv.firstAirDate = firstAirDate
 
 	languageQuery := buildLanguageQuery(req)
 	resp, err := m.client.client.GetTVDetails(m.GetID(), languageQuery)
@@ -94,12 +98,12 @@ func (r tv) GetPopularity() int {
 }
 
 func (r *tv) GetSeasons() []provider.ResponseTVSeason {
-	//slog.Debug("get seasons", "show_id", r.GetID(), "seasons", len(r.seasons))
+	// slog.Debug("get seasons", "show_id", r.GetID(), "seasons", len(r.seasons))
 	return r.seasons
 }
 
 func (r tv) GetSeason(seasonNumber int) (provider.ResponseTVSeason, error) {
-	//slog.Debug("get season", "show_id", r.GetID(), "season_number", seasonNumber)
+	// slog.Debug("get season", "show_id", r.GetID(), "season_number", seasonNumber)
 
 	for _, s := range r.GetSeasons() {
 		if s.GetSeasonNumber() == seasonNumber {

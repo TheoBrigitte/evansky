@@ -2,6 +2,7 @@ package tmdb
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
 
 	gotmdb "github.com/cyruzin/golang-tmdb"
@@ -45,12 +46,15 @@ func (m *tvSeasonResponse) init(result gotmdb.TVSeasonDetails, show provider.Res
 		show:   show,
 	}
 
-	// Parse the first air date in the format "2006-01-02"
-	airDate, err := time.Parse(time.DateOnly, result.AirDate)
-	if err != nil {
-		return err
+	if result.AirDate != "" {
+		slog.Debug("parsing tv season air date", "date", result.AirDate)
+		// Parse the first air date in the format "2006-01-02"
+		airDate, err := time.Parse(time.DateOnly, result.AirDate)
+		if err != nil {
+			return err
+		}
+		m.airDate = airDate
 	}
-	m.airDate = airDate
 
 	languageQuery := buildLanguageQuery(req)
 	season, err := m.client.client.GetTVSeasonDetails(show.GetID(), result.SeasonNumber, languageQuery)
@@ -112,12 +116,12 @@ func (r tvSeason) GetSeasonNumber() int {
 }
 
 func (r tvSeason) GetEpisodes() []provider.ResponseTVEpisode {
-	//slog.Debug("get episodes", "show_id", r.show.GetID(), "season_number", r.result.SeasonNumber, "episodes", len(r.episodes))
+	// slog.Debug("get episodes", "show_id", r.show.GetID(), "season_number", r.result.SeasonNumber, "episodes", len(r.episodes))
 	return r.episodes
 }
 
 func (r tvSeason) GetEpisode(episodeNumber int) (provider.ResponseTVEpisode, error) {
-	//slog.Debug("get episode", "show_id", r.show.GetID(), "season_number", r.result.SeasonNumber, "episode_number", episodeNumber)
+	// slog.Debug("get episode", "show_id", r.show.GetID(), "season_number", r.result.SeasonNumber, "episode_number", episodeNumber)
 
 	for _, e := range r.GetEpisodes() {
 		if e.GetEpisodeNumber() == episodeNumber {

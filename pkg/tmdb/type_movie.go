@@ -1,6 +1,7 @@
 package tmdb
 
 import (
+	"log/slog"
 	"time"
 
 	gotmdb "github.com/cyruzin/golang-tmdb"
@@ -39,16 +40,18 @@ func (c *Client) newMovieResponse(result gotmdb.MovieResult, lang string) (*movi
 	return multi, nil
 }
 
-func newMovie(result gotmdb.MovieResult) (*movie, error) {
-	// Parse the release date in the format "2006-01-02"
-	releaseDate, err := time.Parse(time.DateOnly, result.ReleaseDate)
-	if err != nil {
-		return nil, err
+func newMovie(result gotmdb.MovieResult) (m *movie, err error) {
+	m = &movie{
+		result: result,
 	}
 
-	m := &movie{
-		result:      result,
-		releaseDate: releaseDate,
+	if result.ReleaseDate != "" {
+		slog.Debug("parsing movie release date", "date", result.ReleaseDate)
+		// Parse the release date in the format "2006-01-02"
+		m.releaseDate, err = time.Parse(time.DateOnly, result.ReleaseDate)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return m, nil

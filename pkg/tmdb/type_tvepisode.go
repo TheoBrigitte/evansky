@@ -1,6 +1,7 @@
 package tmdb
 
 import (
+	"log/slog"
 	"time"
 
 	gotmdb "github.com/cyruzin/golang-tmdb"
@@ -40,17 +41,19 @@ func (c *Client) newTVEpisodeResponse(result gotmdb.TVEpisodeDetails, season pro
 	return m, nil
 }
 
-func newTVEpisode(result gotmdb.TVEpisodeDetails, season provider.ResponseTVSeason) (*tvEpisode, error) {
-	// Parse the first air date in the format "2006-01-02"
-	airDate, err := time.Parse(time.DateOnly, result.AirDate)
-	if err != nil {
-		return nil, err
+func newTVEpisode(result gotmdb.TVEpisodeDetails, season provider.ResponseTVSeason) (t *tvEpisode, err error) {
+	t = &tvEpisode{
+		result: result,
+		season: season,
 	}
 
-	t := &tvEpisode{
-		result:  result,
-		airDate: airDate,
-		season:  season,
+	if result.AirDate != "" {
+		slog.Debug("parsing tv episode air date", "date", result.AirDate)
+		// Parse the first air date in the format "2006-01-02"
+		t.airDate, err = time.Parse(time.DateOnly, result.AirDate)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return t, nil

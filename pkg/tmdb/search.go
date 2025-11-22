@@ -7,7 +7,7 @@ import (
 	"github.com/TheoBrigitte/evansky/pkg/provider"
 )
 
-// searchMovies search for movies using query and year (if provided).
+// SearchMovie search for movies using query and year (if provided).
 // see: https://developer.themoviedb.org/reference/search-movie
 func (c *Client) SearchMovie(req provider.Request) (provider.ResponseMovie, error) {
 	slog.Debug("searching movie", "query", req.Query, "year", req.Year, "language", req.Language)
@@ -23,7 +23,7 @@ func (c *Client) SearchMovie(req provider.Request) (provider.ResponseMovie, erro
 	return c.newMovieResponse(movies.Results[0], req.Language)
 }
 
-// searchTV search for tv shows using query and year (if provided).
+// SearchTV search for tv shows using query and year (if provided).
 // see: https://developer.themoviedb.org/reference/search-tv
 func (c *Client) SearchTV(req provider.Request) (provider.ResponseTV, error) {
 	slog.Debug("searching tv", "query", req.Query, "year", req.Year, "language", req.Language)
@@ -68,7 +68,7 @@ func (c *Client) searchMulti(query, year string) (provider.Response, error) {
 }
 
 func buildAdditionalQuery(req provider.Request) map[string]string {
-	var additionalQuery = make(map[string]string)
+	additionalQuery := make(map[string]string)
 	if req.Year != 0 {
 		additionalQuery["year"] = strconv.Itoa(req.Year)
 	}
@@ -79,7 +79,7 @@ func buildAdditionalQuery(req provider.Request) map[string]string {
 }
 
 func buildLanguageQuery(req provider.Request) map[string]string {
-	var additionalQuery = make(map[string]string)
+	additionalQuery := make(map[string]string)
 	if req.Language != "" {
 		additionalQuery["language"] = req.Language
 	}
