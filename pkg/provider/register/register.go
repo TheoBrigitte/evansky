@@ -44,6 +44,10 @@ func Initialize(cmd *cobra.Command) {
 func mustRegister(f provider.ProviderFunc) {
 	p := f()
 
+	if p.Name == "" {
+		panic("provider name cannot be empty")
+	}
+
 	if _, exists := registeredProviders[p.Name]; exists {
 		panic("provider already registered: " + p.Name)
 	}
