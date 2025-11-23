@@ -23,7 +23,6 @@ var (
 		Args:  cobra.MinimumNArgs(1),
 	}
 
-	dryRun     bool
 	exclude    string
 	force      bool
 	language   string
@@ -33,7 +32,6 @@ var (
 )
 
 func init() {
-	Cmd.PersistentFlags().BoolVarP(&dryRun, "dry-run", "n", true, "show what would be done only and do not rename anything")
 	Cmd.PersistentFlags().StringVar(&exclude, "exclude", "", "exclude files matching the given glob pattern")
 	Cmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "skip confirmation")
 	Cmd.PersistentFlags().StringVar(&language, "language", "en", "language used for destination names (ISO 639-1 code)")
@@ -72,7 +70,7 @@ func runner(cmd *cobra.Command, args []string) error {
 		RenameMode: renameMode,
 		Output:     output,
 	}
-	if !dryRun || write {
+	if write {
 		renameOptions.Write = true
 	}
 	r, err := renamer.New(args, providers, renameOptions)
