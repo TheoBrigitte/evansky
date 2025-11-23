@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/prometheus/common/version"
 	"github.com/spf13/cobra"
 
 	"github.com/TheoBrigitte/evansky/cmd/common"
@@ -12,15 +13,21 @@ import (
 )
 
 // rootCmd represents the base command when called without any subcommands
-var rootCmd = &cobra.Command{
-	Use:           "evansky",
-	Short:         "media renamer",
-	Long:          `Rename media files in order to be detected by media server like Jellyfin.`,
-	SilenceUsage:  true,
-	SilenceErrors: true,
-}
+var (
+	name = "evansky"
+
+	rootCmd = &cobra.Command{
+		Use:           name,
+		Short:         "media renamer",
+		Long:          `Rename media files in order to be detected by media server like Jellyfin.`,
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		Version:       version.Print(name),
+	}
+)
 
 func init() {
+	rootCmd.SetVersionTemplate(`{{.Version}}`)
 	rootCmd.AddCommand(completion.Cmd)
 	rootCmd.AddCommand(rename.Cmd)
 	common.Register(rootCmd)

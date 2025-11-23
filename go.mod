@@ -11,11 +11,12 @@ require (
 	github.com/middelink/go-parse-torrent-name v0.0.0-20190301154245-3ff4efacd4c4
 	github.com/pemistahl/lingua-go v1.4.0
 	github.com/pkg/errors v0.9.1
+	github.com/prometheus/common v0.67.4
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/afero v1.14.0
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/pflag v1.0.10
-	golang.org/x/crypto v0.42.0
+	golang.org/x/crypto v0.43.0
 )
 
 require (
@@ -72,11 +73,11 @@ require (
 	go.opentelemetry.io/otel/trace v1.37.0 // indirect
 	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b // indirect
 	golang.org/x/mod v0.28.0 // indirect
-	golang.org/x/net v0.43.0 // indirect
-	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/term v0.35.0 // indirect
-	golang.org/x/text v0.29.0 // indirect
-	google.golang.org/protobuf v1.36.7 // indirect
+	golang.org/x/net v0.46.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/term v0.36.0 // indirect
+	golang.org/x/text v0.30.0 // indirect
+	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 )
 
