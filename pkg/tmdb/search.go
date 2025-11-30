@@ -1,17 +1,17 @@
 package tmdb
 
 import (
-	"log/slog"
 	"strconv"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
+	"github.com/rs/zerolog/log"
 )
 
 // SearchMovie search for movies using query and year (if provided).
 // see: https://developer.themoviedb.org/reference/search-movie
 func (c *Client) SearchMovie(req provider.Request) (provider.ResponseMovie, error) {
-	slog.Debug("searching movie", "query", req.Query, "year", req.Year, "language", req.Language)
 	additionalQuery := buildAdditionalQuery(req)
+	log.Debug().Str("query", req.Query).Any("additionalQuery", additionalQuery).Msg("searching movie")
 	movies, err := c.client.GetSearchMovies(req.Query, additionalQuery)
 	if err != nil {
 		return nil, err
@@ -26,8 +26,8 @@ func (c *Client) SearchMovie(req provider.Request) (provider.ResponseMovie, erro
 // SearchTV search for tv shows using query and year (if provided).
 // see: https://developer.themoviedb.org/reference/search-tv
 func (c *Client) SearchTV(req provider.Request) (provider.ResponseTV, error) {
-	slog.Debug("searching tv", "query", req.Query, "year", req.Year, "language", req.Language)
 	additionalQuery := buildAdditionalQuery(req)
+	log.Debug().Str("query", req.Query).Any("additionalQuery", additionalQuery).Msg("searching tv")
 	tvshows, err := c.client.GetSearchTVShow(req.Query, additionalQuery)
 	if err != nil {
 		return nil, err

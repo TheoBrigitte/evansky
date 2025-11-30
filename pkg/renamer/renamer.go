@@ -3,11 +3,12 @@ package renamer
 import (
 	"fmt"
 	"io"
-	"log/slog"
 	"maps"
 	"os"
 	"path/filepath"
 	"slices"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
 	"github.com/TheoBrigitte/evansky/pkg/renamer/format"
@@ -82,26 +83,25 @@ func (r *renamer) Run(o source.Options) (err error) {
 	case "copy":
 		w = copyFile
 	default:
-		return fmt.Errorf("unknown rename mode: %q", r.o.RenameMode)
+		return fmt.Errorf("unknown rename mode: %s", r.o.RenameMode)
 	}
 
-	var nodes = make(map[string][]source.Node)
+	log.Info().Int("providers", len(r.providers)).Msgf("scanning %d path(s)", len(r.paths))
+
+	nodes := make(map[string][]source.Node)
 	for _, path := range r.paths {
 		output := r.o.Output
 		if output == "" {
 			output = filepath.Dir(filepath.Clean(path))
 		}
 
-		n, err := source.Scan(path, r.providers, o)
-		if err != nil {
-			slog.Error("scan failed", "path", path, "error", err)
-			continue
-		}
+		n := source.Scan(path, r.providers, o)
+
 		nodes[output] = append(nodes[output], n...)
 	}
 
 	if len(nodes) == 0 {
-		slog.Warn("no nodes found")
+		log.Warn().Msg("no results found")
 		return nil
 	}
 
@@ -118,24 +118,22 @@ func (r *renamer) Run(o source.Options) (err error) {
 	}
 	slices.Sort(dirs)
 
-	slog.Info("### starting renaming", "entries", len(entries))
-
 	dirCount := 0
 	for _, dir := range slices.Compact(dirs) {
 		if r.o.Write {
-			err := os.MkdirAll(dir, 0750)
+			err := os.MkdirAll(dir, 0o750)
 			if err != nil {
 				return fmt.Errorf("failed to create directory %q: %w", dir, err)
 			}
 		}
-		fmt.Printf("%s[new directory] -> [%s]\n", prefix, dir)
+		log.Info().Msgf("%s[new directory] -> [%s]", prefix, dir)
 		dirCount++
 	}
 	if dirCount > 0 {
-		slog.Info("### directories created", "count", dirCount)
+		log.Info().Msgf("%screated %d directories", prefix, dirCount)
 	}
 
-	filesCount := 0
+	renamedCount := 0
 	for _, e := range entries {
 		if e.Error != nil {
 			continue
@@ -157,11 +155,8 @@ func (r *renamer) Run(o source.Options) (err error) {
 			continue
 		}
 
-		fmt.Printf("%s[%s] -> [%s]\n", prefix, e.Source, e.Destination)
-		filesCount++
-	}
-	if filesCount > 0 {
-		slog.Info("### files renamed", "count", filesCount)
+		log.Info().Msgf("%s[%s] -> [%s]", prefix, e.Source, e.Destination)
+		renamedCount++
 	}
 
 	errorsCount := 0
@@ -170,12 +165,15 @@ func (r *renamer) Run(o source.Options) (err error) {
 			continue
 		}
 
-		fmt.Printf("%s[%s] -> error: %s\n", prefix, e.Source, e.Error)
+		log.Err(e.Error).Msgf("%s[%s]", prefix, e.Source)
 		errorsCount++
 	}
+
+	e := log.Info()
 	if errorsCount > 0 {
-		slog.Warn("### errors encountered", "count", errorsCount)
+		e = log.Warn()
 	}
+	e.Msgf("%srenamed %d/%d file(s)", prefix, renamedCount, len(entries))
 
 	// TODO: handle non destructive renaming, keeping other files (subtitles, etc)
 	// TODO: include directories in the renaming process

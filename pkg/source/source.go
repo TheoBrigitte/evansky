@@ -16,7 +16,7 @@ import (
 type Source interface {
 	// Scan processes the given path using the provided metadata providers and options,
 	// returning a list of nodes that represent potential rename operations.
-	Scan(string, []provider.Interface, Options) ([]Node, error)
+	Scan(string, []provider.Interface, Options) []Node
 }
 
 // Node represents a single file or directory rename operation.
@@ -44,12 +44,21 @@ type Options struct {
 // Scan is a convenience function that creates a generic source scanner and
 // performs a scan operation with the given parameters.
 // It returns a list of nodes representing potential rename operations.
-func Scan(path string, providers []provider.Interface, o Options) ([]Node, error) {
+func Scan(path string, providers []provider.Interface, o Options) []Node {
 	s := &generic{
 		path:      path,
 		providers: providers,
 		options:   o,
 	}
 
-	return s.scan()
+	nodes, err := s.scan()
+	if err != nil {
+		n := Node{
+			Path:  path,
+			Error: err,
+		}
+		return []Node{n}
+	}
+
+	return nodes
 }

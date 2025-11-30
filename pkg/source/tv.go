@@ -3,7 +3,8 @@ package source
 import (
 	"errors"
 	"fmt"
-	"log/slog"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
 )
@@ -29,14 +30,14 @@ func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req 
 			// Try to detect season number from directory name
 			seasonNumber, err := extractNumber(req.Query, seasonRegex)
 			if err != nil {
-				slog.Warn("findTVChild: cannot detect season number", "title", req.Query, "error", err)
+				log.Debug().Err(err).Msgf("findTVChild: cannot detect season number in title: %s", req.Query)
 			}
 			req.Info.Season = seasonNumber
 		} else {
 			// Try to detect episode number from directory name
 			episodeNumber, err := extractNumber(req.Query, episodeRegex)
 			if err != nil {
-				slog.Warn("findTVChild: cannot detect episode number", "title", req.Query, "error", err)
+				log.Debug().Err(err).Msgf("findTVChild: cannot detect episode number in title: %s", req.Query)
 			}
 			req.Info.Episode = episodeNumber
 			req.Info.Season = -1 // Invalidate season number if episode number is detected
@@ -56,7 +57,7 @@ func (g *generic) findTVChildWithNumber(p provider.Interface, tv provider.Respon
 	if req.Info.Season > 0 {
 		// Prefer season number if available
 
-		//req = g.usePreviousLanguage(req)
+		// req = g.usePreviousLanguage(req)
 
 		// Get season by number
 		season, err := tv.GetSeason(req.Info.Season)
@@ -75,7 +76,7 @@ func (g *generic) findTVChildWithNumber(p provider.Interface, tv provider.Respon
 
 	if req.Info.Episode > 0 {
 		// Only episode number provided, search for episode across all seasons
-		//req = g.usePreviousLanguage(req)
+		// req = g.usePreviousLanguage(req)
 		return g.findTVEpisode(p, tv.GetSeasons(), req)
 	}
 
@@ -86,12 +87,12 @@ func (g *generic) findTVChildWithNumber(p provider.Interface, tv provider.Respon
 // It finds the best match among all seasons and episodes, by
 // comparing the request title against season names and episode names.
 func (g *generic) findTVSeasonOrEpisode(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request) (provider.Response, error) {
-	slog.Debug("find season or episode by name", "seasons", len(seasons), "title", req.Query, "season", req.Info.Season, "episode", req.Info.Episode)
+	log.Debug().Int("seasons", len(seasons)).Int("season", req.Info.Season).Int("episode", req.Info.Episode).Msgf("findTVSeasonOrEpisode: searching for season or episode matching title: %s", req.Query)
 
 	// Search for season or episode by name using.
 	var bestMatch provider.Response
 	var bestScore float64 = -1
-	//seasons := make([]gotmdb.TVSeason, 0, len(show.Seasons))
+	// seasons := make([]gotmdb.TVSeason, 0, len(show.Seasons))
 	for _, season := range seasons {
 		isBetter, seasonScore := betterMatch(req.Query, season.GetName(), bestScore)
 		if isBetter {
@@ -120,7 +121,7 @@ func (g *generic) findTVSeasonOrEpisode(p provider.Interface, seasons []provider
 // - Episode number provided: searches for the episode by number across seasons
 // - Episode title provided: find the best matching episode name
 func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request) (provider.Response, error) {
-	slog.Debug("find episode", "seasons", len(seasons), "title", req.Query, "season", req.Info.Season, "episode", req.Info.Episode)
+	log.Debug().Int("seasons", len(seasons)).Int("season", req.Info.Season).Int("episode", req.Info.Episode).Msgf("findTVEpisode: searching for episode in title: %s", req.Query)
 	if req.Info.Episode > 0 {
 		if req.Info.Season < 0 {
 			// Season number is invalid, try absolute numbering
@@ -175,12 +176,12 @@ func (g *generic) findTVEpisodeAbsoluteNumber(p provider.Interface, seasons []pr
 	for _, season := range seasons {
 		if season.GetSeasonNumber() == 0 {
 			// Skip season 0 (specials) for absolute numbering
-			slog.Debug("skip season 0 for absolute numbering")
+			log.Debug().Msg("findTVEpisodeAbsoluteNumber: skipping season 0 for absolute numbering")
 			continue
 		}
 
 		episodes := season.GetEpisodes()
-		slog.Debug("checking season for absolute numbering", "season", season.GetSeasonNumber(), "episodes", len(episodes), "current_absolute", absoluteNumber, "target_episode", req.Info.Episode)
+		log.Debug().Int("season", season.GetSeasonNumber()).Int("episodes", len(episodes)).Int("current_absolute", absoluteNumber).Int("target_episode", req.Info.Episode).Msg("checking season for absolute numbering")
 		if (len(episodes) + absoluteNumber) < req.Info.Episode {
 			// Not enough episodes in this season, don't bother looking inside
 			absoluteNumber += len(episodes)

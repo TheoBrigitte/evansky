@@ -2,7 +2,6 @@ package rename
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -56,7 +55,7 @@ func runner(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		if err == nil && !info.IsDir() {
-			return fmt.Errorf("output %q is not a directory", output)
+			return fmt.Errorf("output is not a directory: %s", output)
 		}
 		output = filepath.Clean(output)
 	}
@@ -69,6 +68,7 @@ func runner(cmd *cobra.Command, args []string) error {
 	if write {
 		renameOptions.Write = true
 	}
+
 	r, err := renamer.New(args, providers, renameOptions)
 	if err != nil {
 		return err
@@ -77,8 +77,6 @@ func runner(cmd *cobra.Command, args []string) error {
 	sourceOptions := source.Options{
 		ExcludeGlob: exclude,
 	}
-
-	slog.Info("start", "sources", len(args), "provider", len(providers))
 
 	return r.Run(sourceOptions)
 }

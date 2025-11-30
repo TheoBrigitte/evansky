@@ -2,10 +2,10 @@ package tmdb
 
 import (
 	"fmt"
-	"log/slog"
 	"time"
 
 	gotmdb "github.com/cyruzin/golang-tmdb"
+	"github.com/rs/zerolog/log"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
 )
@@ -46,7 +46,7 @@ func (m *tvResponse) init(result gotmdb.TVShowResult, req provider.Request) erro
 	}
 
 	if result.FirstAirDate != "" {
-		slog.Debug("parsing tv first air date", "date", result.FirstAirDate)
+		// log.Debug().Msg("parsing tv first air date: " + result.FirstAirDate)
 		// Parse the first air date in the format "2006-01-02"
 		firstAirDate, err := time.Parse(time.DateOnly, result.FirstAirDate)
 		if err != nil {
@@ -75,7 +75,7 @@ func (m *tvResponse) init(result gotmdb.TVShowResult, req provider.Request) erro
 		seasons = append(seasons, r)
 	}
 	m.tv.seasons = seasons
-	slog.Debug("tv show seasons loaded", "show_id", m.GetID(), "seasons", len(m.seasons))
+	log.Debug().Msgf("TV show %d seasons loaded: %d", m.GetID(), len(m.seasons))
 	m.multi[req.Language] = m.tv
 
 	return nil

@@ -14,8 +14,7 @@ type Formatter interface {
 	TVEpisode(provider.ResponseTVEpisode) []string
 }
 
-type JellyfinFormatter struct {
-}
+type JellyfinFormatter struct{}
 
 func NewJellyfinFormatter() JellyfinFormatter {
 	return JellyfinFormatter{}

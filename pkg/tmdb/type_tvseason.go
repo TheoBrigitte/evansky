@@ -2,7 +2,6 @@ package tmdb
 
 import (
 	"fmt"
-	"log/slog"
 	"time"
 
 	gotmdb "github.com/cyruzin/golang-tmdb"
@@ -47,7 +46,7 @@ func (m *tvSeasonResponse) init(result gotmdb.TVSeasonDetails, show provider.Res
 	}
 
 	if result.AirDate != "" {
-		slog.Debug("parsing tv season air date", "date", result.AirDate)
+		// log.Debug().Msgf("parsing tv season air date: %s", result.AirDate)
 		// Parse the first air date in the format "2006-01-02"
 		airDate, err := time.Parse(time.DateOnly, result.AirDate)
 		if err != nil {

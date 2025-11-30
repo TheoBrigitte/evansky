@@ -1,10 +1,10 @@
 package cmd
 
 import (
-	"log/slog"
 	"os"
 
 	"github.com/prometheus/common/version"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
 	"github.com/TheoBrigitte/evansky/cmd/common"
@@ -38,7 +38,7 @@ func init() {
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
-		slog.Error(err.Error())
+		log.Err(err).Send()
 		os.Exit(1)
 	}
 }

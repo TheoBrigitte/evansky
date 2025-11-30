@@ -4,7 +4,6 @@
 package language
 
 import (
-	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -79,14 +78,13 @@ func Detect(req provider.Request, entries []os.DirEntry) (string, float64, strin
 		lang, _ := Lingua(strings.Join(names, "\n"))
 		lang = strings.ToLower(lang)
 
-		//slog.Debug("language: detected childs language", "language", lang, "confidence", confidence)
+		// slog.Debug("language: detected childs language", "language", lang, "confidence", confidence)
 		childLang = lang
-		//return strings.ToLower(lang), confidence
+		// return strings.ToLower(lang), confidence
 	}
 
 	if req.Response == nil {
 		// Use default language for initial search, to let the provider decide the best match.
-		slog.Debug("language: no parent, using default language", "language", "en")
 		return "en", -1, childLang
 	}
 
@@ -94,13 +92,11 @@ func Detect(req provider.Request, entries []os.DirEntry) (string, float64, strin
 	// Having a previous request means we are already down in the tree.
 	prevReq := req.Response.GetRequest()
 	if prevReq == nil {
-		slog.Debug("language: no parent, using default language", "language", "en")
 		return "en", -1, childLang
 	}
 
-	slog.Debug("language: detected", "language", prevReq.Language)
 	return prevReq.Language, -1, childLang
 
-	//lang, confidence := Lingua(req.Query)
-	//return strings.ToLower(lang), confidence
+	// lang, confidence := Lingua(req.Query)
+	// return strings.ToLower(lang), confidence
 }
