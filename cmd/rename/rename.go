@@ -16,7 +16,7 @@ import (
 
 var (
 	Cmd = &cobra.Command{
-		Use:   "rename",
+		Use:   "rename [flags] <file | directory>...",
 		Short: "rename directory content",
 		Long:  `Rename and organize directory content`,
 		RunE:  runner,
@@ -43,10 +43,6 @@ func init() {
 }
 
 func runner(cmd *cobra.Command, args []string) error {
-	if len(args) < 1 {
-		return fmt.Errorf("directory missing")
-	}
-
 	providers, err := register.GetProviders()
 	if err != nil {
 		return err
