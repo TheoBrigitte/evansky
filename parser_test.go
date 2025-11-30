@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -121,12 +121,12 @@ func TestParser(t *testing.T) {
 					t.Fatalf("error marshaling result: %v", err)
 				}
 
-				if err = ioutil.WriteFile(goldenFilename, buf, 0644); err != nil {
+				if err = os.WriteFile(goldenFilename, buf, 0o644); err != nil {
 					t.Fatalf("unable to update golden file: %v", err)
 				}
 			}
 
-			buf, err := ioutil.ReadFile(goldenFilename)
+			buf, err := os.ReadFile(goldenFilename)
 			if err != nil {
 				t.Fatalf("error loading golden file: %v", err)
 			}

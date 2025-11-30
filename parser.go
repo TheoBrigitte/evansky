@@ -4,6 +4,9 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // TorrentInfo is the resulting structure returned by Parse
@@ -32,12 +35,14 @@ type TorrentInfo struct {
 	ThreeD     bool   `json:"3d,omitempty"`
 }
 
+var titleCaser = cases.Title(language.English, cases.NoLower)
+
 func setField(tor *TorrentInfo, field, raw, val string) {
 	ttor := reflect.TypeOf(tor)
 	torV := reflect.ValueOf(tor)
-	field = strings.Title(field)
+	field = titleCaser.String(field)
 	v, _ := ttor.Elem().FieldByName(field)
-	//fmt.Printf("    field=%v, type=%+v, value=%v\n", field, v.Type, val)
+	// fmt.Printf("    field=%v, type=%+v, value=%v\n", field, v.Type, val)
 	switch v.Type.Kind() {
 	case reflect.Bool:
 		torV.Elem().FieldByName(field).SetBool(true)
@@ -55,9 +60,9 @@ func setField(tor *TorrentInfo, field, raw, val string) {
 // Parse breaks up the given filename in TorrentInfo
 func Parse(filename string) (*TorrentInfo, error) {
 	tor := &TorrentInfo{}
-	//fmt.Printf("filename %q\n", filename)
+	// fmt.Printf("filename %q\n", filename)
 
-	var startIndex, endIndex = 0, len(filename)
+	startIndex, endIndex := 0, len(filename)
 	cleanName := strings.Replace(filename, "_", " ", -1)
 	for _, pattern := range patterns {
 		matches := pattern.re.FindAllStringSubmatch(cleanName, -1)
@@ -69,15 +74,15 @@ func Parse(filename string) (*TorrentInfo, error) {
 			// Take last occurence of element.
 			matchIdx = len(matches) - 1
 		}
-		//fmt.Printf("  %s: pattern:%q match:%#v\n", pattern.name, pattern.re, matches[matchIdx])
+		// fmt.Printf("  %s: pattern:%q match:%#v\n", pattern.name, pattern.re, matches[matchIdx])
 
 		index := strings.Index(cleanName, matches[matchIdx][1])
 		if index == 0 {
 			startIndex = len(matches[matchIdx][1])
-			//fmt.Printf("    startIndex moved to %d [%q]\n", startIndex, filename[startIndex:endIndex])
+			// fmt.Printf("    startIndex moved to %d [%q]\n", startIndex, filename[startIndex:endIndex])
 		} else if index < endIndex {
 			endIndex = index
-			//fmt.Printf("    endIndex moved to %d [%q]\n", endIndex, filename[startIndex:endIndex])
+			// fmt.Printf("    endIndex moved to %d [%q]\n", endIndex, filename[startIndex:endIndex])
 		}
 
 		// If the value already exists, it is no longer updated. see golden_file_083.json
@@ -89,7 +94,7 @@ func Parse(filename string) (*TorrentInfo, error) {
 	}
 
 	// Start process for title
-	//fmt.Println("  title: <internal>")
+	// fmt.Println("  title: <internal>")
 	if startIndex > endIndex {
 		startIndex = 0
 	}
@@ -122,7 +127,7 @@ func CleanTitle(raw string) string {
 	// Replace underscores with spaces
 	cleanName = strings.ReplaceAll(cleanName, "_", " ")
 
-	//cleanName = re.sub('([\[\(_]|- )$', '', cleanName).strip()
+	// cleanName = re.sub('([\[\(_]|- )$', '', cleanName).strip()
 
 	return strings.TrimSpace(cleanName)
 }
