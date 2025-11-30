@@ -234,7 +234,7 @@ func (g *generic) find(p provider.Interface, req provider.Request) (provider.Res
 		}
 
 		// Search for Movie or TV show.
-		return g.searchByPopularity(p, req)
+		return g.searchByYearOrPopularity(p, req)
 	}
 
 	// Change language of the response to match the request language.
@@ -281,10 +281,10 @@ func (g *generic) find(p provider.Interface, req provider.Request) (provider.Res
 	return nil, fmt.Errorf("find: unsupported response media type: %T", req.Response)
 }
 
-// searchByPopularity searches for both movie and TV show and returns the most popular one.
+// searchByYearOrPopularity searches for both movie and TV show and returns the most popular one.
 // This method is used when we have ambiguous media that could be either a movie or TV show.
 // It queries both endpoints and compares popularity scores to determine the best match.
-func (g *generic) searchByPopularity(p provider.Interface, req provider.Request) (provider.Response, error) {
+func (g *generic) searchByYearOrPopularity(p provider.Interface, req provider.Request) (provider.Response, error) {
 	slog.Debug("searching by popularity", "query", req.Query, "year", req.Year)
 	movie, err := p.SearchMovie(req)
 	if err != nil && !errors.Is(err, provider.ErrNoResult) {
@@ -311,6 +311,16 @@ func (g *generic) searchByPopularity(p provider.Interface, req provider.Request)
 	if tvshow == nil {
 		// Only movie found.
 		return movie, nil
+	}
+
+	if req.Year > 0 {
+		// If there is a year specified, and both movie and tv year are different, pick the one which match if any
+		if req.Year == movie.GetDate().Year() && req.Year != tvshow.GetDate().Year() {
+			return movie, nil
+		}
+		if req.Year == tvshow.GetDate().Year() && req.Year != movie.GetDate().Year() {
+			return tvshow, nil
+		}
 	}
 
 	if movie.GetPopularity() >= tvshow.GetPopularity() {
