@@ -2,10 +2,11 @@ package common
 
 import (
 	"fmt"
-	"log/slog"
 	"os"
 	"strings"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
@@ -27,27 +28,20 @@ func LogLevel(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	logWithSource, err := cmd.Flags().GetBool("log-with-source")
+	zerolog.SetGlobalLevel(level)
 
-	// Set the default logger for the application.
-	loggerOptions := &slog.HandlerOptions{
-		AddSource: logWithSource,
-		Level:     level,
-	}
-	logger := slog.NewTextHandler(os.Stderr, loggerOptions)
-	slog.SetDefault(slog.New(logger))
+	// Set log to be printed on stderr with human-friendly format
+	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 
 	return nil
 }
 
-var (
-	logLevels = map[string]slog.Level{
-		"debug": slog.LevelDebug,
-		"info":  slog.LevelInfo,
-		"warn":  slog.LevelWarn,
-		"error": slog.LevelError,
-	}
-)
+var logLevels = map[string]zerolog.Level{
+	"debug": zerolog.DebugLevel,
+	"info":  zerolog.InfoLevel,
+	"warn":  zerolog.WarnLevel,
+	"error": zerolog.ErrorLevel,
+}
 
 func allLogLevels() string {
 	levels := make([]string, 0, len(logLevels))
@@ -57,7 +51,7 @@ func allLogLevels() string {
 	return strings.Join(levels, ", ")
 }
 
-func parseLogLevel(logLevelStr string) (slog.Level, error) {
+func parseLogLevel(logLevelStr string) (zerolog.Level, error) {
 	level, ok := logLevels[logLevelStr]
 	if !ok {
 		return -1, fmt.Errorf("invalid log level: %s", logLevelStr)
