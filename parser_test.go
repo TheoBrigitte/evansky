@@ -102,6 +102,7 @@ var testData = []string{
 	"网球王子 - S01E172 - 第 172 集.mkv",
 	"Dragon Ball Z 1989-1996 [30Th Anniversary] REMASTERED Intégral (291EP) NC MULTI 1080p HDLight BluRay AC3 x265-Thebatou8652",
 	"Tortues Ninja - les chevaliers d’ecaille S01 VOF 720p HDTV AAC 2.0 x265-DeSs",
+	"Cuisine et dependances (1993) - 1080p FR x264 ac3 mHDgz.mkv",
 }
 
 func TestParser(t *testing.T) {
