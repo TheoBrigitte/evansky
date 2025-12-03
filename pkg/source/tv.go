@@ -28,16 +28,16 @@ func (g *generic) findTVChild(p provider.Interface, tv provider.ResponseTV, req 
 
 		if req.Entry.IsDir() {
 			// Try to detect season number from directory name
-			seasonNumber, err := extractNumber(req.Query, seasonRegex)
+			seasonNumber, err := extractNumber(req.Entry.Name(), seasonRegex)
 			if err != nil {
-				log.Debug().Err(err).Msgf("findTVChild: cannot detect season number in title: %s", req.Query)
+				return nil, fmt.Errorf("findTVChild: cannot detect season number in title: %s", req.Entry.Name())
 			}
 			req.Info.Season = seasonNumber
 		} else {
 			// Try to detect episode number from directory name
-			episodeNumber, err := extractNumber(req.Query, episodeRegex)
+			episodeNumber, err := extractNumber(req.Entry.Name(), episodeRegex)
 			if err != nil {
-				log.Debug().Err(err).Msgf("findTVChild: cannot detect episode number in title: %s", req.Query)
+				return nil, fmt.Errorf("findTVChild: cannot detect episode number in title: %s", req.Entry.Name())
 			}
 			req.Info.Episode = episodeNumber
 			req.Info.Season = -1 // Invalidate season number if episode number is detected
@@ -87,21 +87,21 @@ func (g *generic) findTVChildWithNumber(p provider.Interface, tv provider.Respon
 // It finds the best match among all seasons and episodes, by
 // comparing the request title against season names and episode names.
 func (g *generic) findTVSeasonOrEpisode(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request) (provider.Response, error) {
-	log.Debug().Int("seasons", len(seasons)).Int("season", req.Info.Season).Int("episode", req.Info.Episode).Msgf("findTVSeasonOrEpisode: searching for season or episode matching title: %s", req.Query)
+	log.Debug().Int("seasons", len(seasons)).Int("season", req.Info.Season).Int("episode", req.Info.Episode).Msgf("findTVSeasonOrEpisode: searching for season or episode matching title: %s", req.Entry.Name())
 
 	// Search for season or episode by name using.
 	var bestMatch provider.Response
 	var bestScore float64 = -1
 	// seasons := make([]gotmdb.TVSeason, 0, len(show.Seasons))
 	for _, season := range seasons {
-		isBetter, seasonScore := betterMatch(req.Query, season.GetName(), bestScore)
+		isBetter, seasonScore := betterMatch(req.Entry.Name(), season.GetName(), bestScore)
 		if isBetter {
 			bestScore = seasonScore
 			bestMatch = season
 		}
 
 		for _, episode := range season.GetEpisodes() {
-			isBetter, episodeScore := betterMatch(req.Query, episode.GetName(), bestScore)
+			isBetter, episodeScore := betterMatch(req.Entry.Name(), episode.GetName(), bestScore)
 			if isBetter {
 				bestScore = episodeScore
 				bestMatch = episode
@@ -113,7 +113,7 @@ func (g *generic) findTVSeasonOrEpisode(p provider.Interface, seasons []provider
 		return bestMatch, nil
 	}
 
-	return nil, fmt.Errorf("findTVSeasonOrEpisode: no match found for %s", req.Query)
+	return nil, fmt.Errorf("findTVSeasonOrEpisode: no match found for %s", req.Entry.Name())
 }
 
 // findTVEpisode finds a TV show episode based on the request information.
@@ -121,7 +121,9 @@ func (g *generic) findTVSeasonOrEpisode(p provider.Interface, seasons []provider
 // - Episode number provided: searches for the episode by number across seasons
 // - Episode title provided: find the best matching episode name
 func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request) (provider.Response, error) {
-	log.Debug().Int("seasons", len(seasons)).Int("season", req.Info.Season).Int("episode", req.Info.Episode).Msgf("findTVEpisode: searching for episode in title: %s", req.Query)
+	name := req.Entry.Name()
+
+	log.Debug().Int("seasons", len(seasons)).Int("season", req.Info.Season).Int("episode", req.Info.Episode).Msgf("findTVEpisode: searching for episode in title: %s", name)
 	if req.Info.Episode > 0 {
 		if req.Info.Season < 0 {
 			// Season number is invalid, try absolute numbering
@@ -130,7 +132,7 @@ func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.Respons
 		return g.findTVEpisodeInSeasons(p, seasons, req)
 	}
 
-	if req.Query == "" {
+	if name == "" {
 		// We need at least an episode title to search for an episode.
 		return nil, fmt.Errorf("findTVEpisode: no episode information")
 	}
@@ -140,7 +142,7 @@ func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.Respons
 	var bestScore float64 = -1
 	for _, season := range seasons {
 		for _, episode := range season.GetEpisodes() {
-			isBetter, episodeScore := betterMatch(req.Query, episode.GetName(), bestScore)
+			isBetter, episodeScore := betterMatch(name, episode.GetName(), bestScore)
 			if isBetter {
 				bestScore = episodeScore
 				bestMatch = episode
@@ -152,7 +154,7 @@ func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.Respons
 		return bestMatch, nil
 	}
 
-	return nil, fmt.Errorf("findTVEpisode: episode %s no match found", req.Query)
+	return nil, fmt.Errorf("findTVEpisode: episode %s no match found", name)
 }
 
 func (g *generic) findTVEpisodeInSeasons(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request) (provider.Response, error) {
