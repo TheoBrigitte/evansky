@@ -42,6 +42,7 @@ type Options struct {
 	MaxDepth  int // Maximum directory depth to process
 	// TODO: might be an options just for renaming and not sourcing
 	SkipDirectories bool // Whether to skip processing directories themselves
+	StripComponents int  // Number of leading path components to strip from source paths
 }
 
 // Scan is a convenience function that creates a generic source scanner and

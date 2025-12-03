@@ -79,7 +79,7 @@ func (g *generic) scan() ([]Node, error) {
 	}
 
 	// Start walking the directory tree.
-	return g.walk(g.path, dirInfo, nil), nil
+	return g.walk(g.path, dirInfo, 0, nil), nil
 }
 
 // walk recursively walks the directory tree and processes each file or directory.
@@ -88,9 +88,7 @@ func (g *generic) scan() ([]Node, error) {
 // 2. Detects the language based on directory contents
 // 3. Queries metadata providers to get accurate information
 // 4. Generates nodes for files or continues recursion for directories
-func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Response) []Node {
-	log.Info().Msgf("scanning %s", path)
-
+func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp provider.Response) []Node {
 	n := Node{
 		Entry: entry,
 		Path:  path,
@@ -168,23 +166,34 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 	// confidence is only used for logging purposes.
 	lang, confidence, childLang := language.Detect(req, dirs)
 	req.Language = lang
-
 	// slog.Debug("processing", "info", info, "request", req, "path", path, "confidence", lang.Confidence, "reliable", lang.IsReliable())
 	log.Debug().Str("language", req.Language).Float64("confidence", confidence).Msgf("detected language")
 
-	// Query the providers with the parsed information.
-	resp, err := g.Find(req)
-	if err != nil {
-		// slog.Info("found", "old", n.PathOld, "new", n.PathNew)
-		n.Error = fmt.Errorf("failed to find media: %w", err)
+	var resp provider.Response
+	if g.options.StripComponents <= depth {
+		// Query the providers with the parsed information.
+		resp, err = g.Find(req)
+		if err != nil {
+			// slog.Info("found", "old", n.PathOld, "new", n.PathNew)
+			n.Error = fmt.Errorf("failed to find media: %w", err)
 
-		// log.Err(err).Str("path", path).Msg("processed")
-		return []Node{n}
+			// log.Err(err).Str("path", path).Msg("processed")
+			return []Node{n}
+		}
+
+		log.Info().Str("name", resp.GetName()).Int("year", resp.GetDate().Year()).Str("type", fmt.Sprintf("%T", resp)).Msgf("found    %s", path)
+
+		n.Response = resp
+		// This is a directory, continue walking.
+		// Enforce the detected language for child entries, as this is more accurate since
+		// language was detected over all child entries.
+		req.Language = childLang
+		resp.SetRequest(req)
+	} else {
+		log.Debug().Msgf("skipping entry due to strip components setting (depth %d, strip %d): %s", depth, g.options.StripComponents, path)
 	}
+	depth++
 
-	n.Response = resp
-
-	log.Info().Str("name", resp.GetName()).Int("year", resp.GetDate().Year()).Str("type", fmt.Sprintf("%T", resp)).Msgf("found    %s", path)
 	// slog.Debug("processed", "response", resp, "path", path)
 
 	if !entry.IsDir() {
@@ -198,12 +207,6 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 	}
 	// slog.Info("found", "old", path, "new", name)
 
-	// This is a directory, continue walking.
-	// Enforce the detected language for child entries, as this is more accurate since
-	// language was detected over all child entries.
-	req.Language = childLang
-	resp.SetRequest(req)
-
 	// TODO: Try to identify directory pattern (tv show, movie collection, etc).
 	// Backtrack if we detect a different media type than the one we are looking for.
 
@@ -212,7 +215,7 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 		// Build the next path as: current path + entry name.
 		nextPath := filepath.Join(path, nextEntry.Name())
 		// TODO: allow for non-recursive scan
-		childNodes := g.walk(nextPath, nextEntry, resp)
+		childNodes := g.walk(nextPath, nextEntry, depth, resp)
 		if childNodes == nil {
 			continue
 		}

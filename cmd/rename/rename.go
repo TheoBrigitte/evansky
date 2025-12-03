@@ -30,6 +30,7 @@ var (
 	language        string
 	output          string
 	query           string
+	stripComponents int
 	renameMode      string
 	write           bool
 )
@@ -43,6 +44,7 @@ func init() {
 	Cmd.PersistentFlags().StringVarP(&output, "output", "o", "", "output directory (default: same as source)")
 	Cmd.PersistentFlags().StringVar(&query, "query", "", "search query override")
 	Cmd.PersistentFlags().StringVar(&renameMode, "mode", "symlink", "rename mode: symlink, hardlink, copy, move")
+	Cmd.PersistentFlags().IntVar(&stripComponents, "strip-components", 0, "number of leading path components to strip from source paths")
 	Cmd.PersistentFlags().BoolVar(&write, "write", false, "actually perform the rename operation (default: false)")
 
 	register.Initialize(Cmd)
@@ -83,10 +85,11 @@ func runner(cmd *cobra.Command, args []string) error {
 	}
 
 	sourceOptions := source.Options{
-		Query:        query,
-		ExcludeGlob:  excludeGlob,
-		ExcludeRegex: excludeRegex,
-		IncludeRegex: includeRegex,
+		Query:           query,
+		ExcludeGlob:     excludeGlob,
+		ExcludeRegex:    excludeRegex,
+		IncludeRegex:    includeRegex,
+		StripComponents: stripComponents,
 	}
 
 	return r.Run(sourceOptions)

@@ -175,7 +175,7 @@ func (r *renamer) Run(o source.Options) (err error) {
 
 		// Check for duplicate destination paths
 		if _, exists := uniqEntries[entries[index].Destination]; exists {
-			entries[index].Error = fmt.Errorf("duplicate destination path")
+			entries[index].Error = fmt.Errorf("duplicate destination path: %s", entries[index].Destination)
 			continue
 		}
 
