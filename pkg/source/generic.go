@@ -316,12 +316,12 @@ func (g *generic) searchByYearOrPopularity(p provider.Interface, req provider.Re
 		return movie, nil
 	}
 
-	if req.Year > 0 {
+	if req.Year > 0 && movie.GetDate().Year() != tvshow.GetDate().Year() {
 		// If there is a year specified, and both movie and tv year are different, pick the one which match if any
-		if req.Year == movie.GetDate().Year() && req.Year != tvshow.GetDate().Year() {
+		if req.Year == movie.GetDate().Year() {
 			return movie, nil
 		}
-		if req.Year == tvshow.GetDate().Year() && req.Year != movie.GetDate().Year() {
+		if req.Year == tvshow.GetDate().Year() {
 			return tvshow, nil
 		}
 	}

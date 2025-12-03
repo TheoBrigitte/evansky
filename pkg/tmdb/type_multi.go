@@ -52,9 +52,6 @@ func (r multiResponse) GetPopularity() int {
 }
 
 func computePopularity(popularity, voteAverage float32, voteCount int64) int {
-	if popularity > 0 {
-		return int(popularity)
-	}
 	if voteCount == 0 {
 		return 0
 	}
