@@ -50,6 +50,8 @@ type renamer struct {
 
 // Options configures the behavior of the renamer.
 type Options struct {
+	// Force enables overwriting existing files at the destination
+	Force bool
 	// Formatter defines how to format the destination filenames
 	Formatter format.Formatter
 	// Output specifies the base directory for renamed files
@@ -310,6 +312,15 @@ func (r *renamer) write(src, dst string, fn writer) error {
 		return nil
 	}
 
+	if r.o.Force {
+		if _, err := os.Lstat(dst); err == nil {
+			err = os.Remove(dst)
+			if err != nil {
+				return fmt.Errorf("failed to remove existing destination %q: %w", dst, err)
+			}
+		}
+	}
+
 	return fn(src, dst)
 }
 
@@ -317,15 +328,15 @@ func (r *renamer) write(src, dst string, fn writer) error {
 func getSymlinkSrc(src, dst string) (string, error) {
 	absSrc, err := filepath.Abs(src)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get absolute path of source %q: %w", src, err)
 	}
 	absDst, err := filepath.Abs(filepath.Dir(dst))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get absolute path of destination %q: %w", dst, err)
 	}
 	realSrc, err := filepath.Rel(absDst, absSrc)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to get relative path from %q to %q: %w", absDst, absSrc, err)
 	}
 
 	return realSrc, nil
@@ -335,7 +346,7 @@ func getSymlinkSrc(src, dst string) (string, error) {
 func copyFile(src, dst string) error {
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to stat source file %q: %w", src, err)
 	}
 
 	if !sourceFileStat.Mode().IsRegular() {
@@ -344,15 +355,15 @@ func copyFile(src, dst string) error {
 
 	source, err := os.Open(src)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to open source file %q: %w", src, err)
 	}
 	defer source.Close()
 
 	destination, err := os.Create(dst)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create destination file %q: %w", dst, err)
 	}
 	defer destination.Close()
 	_, err = io.Copy(destination, source)
-	return err
+	return fmt.Errorf("failed to copy from %q to %q: %w", src, dst, err)
 }

@@ -23,15 +23,15 @@ var (
 		Args: cobra.MinimumNArgs(1),
 	}
 
-	excludeGlob  string
-	excludeRegex string
-	includeRegex string
-	force        bool
-	language     string
-	output       string
-	query        string
-	renameMode   string
-	write        bool
+	excludeGlob     string
+	excludeRegex    string
+	includeRegex    string
+	force           bool
+	language        string
+	output          string
+	query           string
+	renameMode      string
+	write           bool
 )
 
 func init() {
@@ -68,6 +68,7 @@ func runner(cmd *cobra.Command, args []string) error {
 	}
 
 	renameOptions := renamer.Options{
+		Force:      force,
 		Formatter:  formatter,
 		Output:     output,
 		RenameMode: renameMode,
