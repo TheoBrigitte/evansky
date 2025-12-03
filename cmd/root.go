@@ -27,7 +27,7 @@ var (
 )
 
 func init() {
-	rootCmd.SetVersionTemplate(`{{.Version}}`)
+	rootCmd.SetVersionTemplate(`{{.Version}}{{"\n"}}`)
 	rootCmd.AddCommand(completion.Cmd)
 	rootCmd.AddCommand(rename.Cmd)
 	common.Register(rootCmd)
