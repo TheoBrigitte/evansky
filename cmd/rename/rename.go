@@ -17,22 +17,27 @@ var (
 	Cmd = &cobra.Command{
 		Use:   "rename [flags] <file | directory>...",
 		Short: "rename directory content",
-		Long:  `Rename and organize directory content`,
-		RunE:  runner,
-		Args:  cobra.MinimumNArgs(1),
+		Long: `Rename and organize directory content` +
+			`--exclude and --exclude-regex are anded.`,
+		RunE: runner,
+		Args: cobra.MinimumNArgs(1),
 	}
 
-	exclude    string
-	force      bool
-	language   string
-	output     string
-	query      string
-	renameMode string
-	write      bool
+	excludeGlob  string
+	excludeRegex string
+	includeRegex string
+	force        bool
+	language     string
+	output       string
+	query        string
+	renameMode   string
+	write        bool
 )
 
 func init() {
-	Cmd.PersistentFlags().StringVar(&exclude, "exclude", "", "exclude files matching the given glob pattern")
+	Cmd.PersistentFlags().StringVar(&excludeGlob, "exclude", "", "exclude files matching the given glob pattern")
+	Cmd.PersistentFlags().StringVar(&excludeRegex, "exclude-regex", "", "exclude files matching the given regular expression")
+	Cmd.PersistentFlags().StringVar(&includeRegex, "include-regex", "", "include files matching the given regular expression")
 	Cmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "skip confirmation")
 	Cmd.PersistentFlags().StringVar(&language, "language", "en", "language used for destination names (ISO 639-1 code)")
 	Cmd.PersistentFlags().StringVarP(&output, "output", "o", "", "output directory (default: same as source)")
@@ -77,8 +82,10 @@ func runner(cmd *cobra.Command, args []string) error {
 	}
 
 	sourceOptions := source.Options{
-		Query:       query,
-		ExcludeGlob: exclude,
+		Query:        query,
+		ExcludeGlob:  excludeGlob,
+		ExcludeRegex: excludeRegex,
+		IncludeRegex: includeRegex,
 	}
 
 	return r.Run(sourceOptions)

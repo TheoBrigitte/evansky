@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -22,10 +23,12 @@ var ErrExcludedPath = errors.New("excluded path")
 // It provides functionality to scan directory structures, parse media information,
 // and query metadata providers to generate nodes for renaming operations.
 type generic struct {
-	path     string   // Root path to scan for media files
-	newPath  string   // Proposed new path (currently unused)
-	options  Options  // Configuration options for scanning behavior
-	excludes []string // List of files or directories to exclude based on glob patterns
+	path         string         // Root path to scan for media files
+	newPath      string         // Proposed new path (currently unused)
+	options      Options        // Configuration options for scanning behavior
+	excludes     []string       // List of files or directories to exclude based on glob patterns
+	excludeRegex *regexp.Regexp // Compiled regex for excluding files or directories
+	includeRegex *regexp.Regexp // Compiled regex for include files or directories
 
 	providers []provider.Interface // List of metadata providers to query
 }
@@ -61,6 +64,20 @@ func (g *generic) scan() ([]Node, error) {
 		g.excludes = excludes
 	}
 
+	if g.options.ExcludeRegex != "" {
+		g.excludeRegex, err = regexp.Compile(g.options.ExcludeRegex)
+		if err != nil {
+			return nil, fmt.Errorf("failed to compile exclude regex: %w", err)
+		}
+	}
+
+	if g.options.IncludeRegex != "" {
+		g.includeRegex, err = regexp.Compile(g.options.IncludeRegex)
+		if err != nil {
+			return nil, fmt.Errorf("failed to compile include regex: %w", err)
+		}
+	}
+
 	// Start walking the directory tree.
 	return g.walk(g.path, dirInfo, nil), nil
 }
@@ -93,7 +110,6 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 		return []Node{n}
 	}
 
-	log.Debug().Str("path", path).Str("query", query).Interface("info", info).Msg("parsed media info")
 	n.Info = *info
 
 	// TODO: if we have more information than the parent request, backtrack and re-query the providers with the new information. Year is most important.
@@ -112,6 +128,8 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 		Response: parentResp,
 	}
 
+	log.Debug().Str("path", path).Str("query", req.Query).Int("Year", info.Year).Interface("info", info).Msg("parsed media info")
+
 	if info.Year == 0 && info.Season == 0 && info.Episode == 0 {
 		// Parsing did not yield useful information, use the full name as query.
 		// This fixes an issue where some names are not parsed correctly.
@@ -129,11 +147,21 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 			return []Node{n}
 		}
 	} else {
-		shouldExclude := slices.Contains(g.excludes, path)
-		if shouldExclude {
-			n.Error = fmt.Errorf("%w: %s", ErrExcludedPath, path)
+		if slices.Contains(g.excludes, path) {
+			n.Error = fmt.Errorf("%w by glob: %s", ErrExcludedPath, path)
 			return []Node{n}
 		}
+
+		if g.excludeRegex != nil && g.excludeRegex.MatchString(path) {
+			n.Error = fmt.Errorf("%w by regex: %s", ErrExcludedPath, path)
+			return []Node{n}
+		}
+
+		if g.includeRegex != nil && !g.includeRegex.MatchString(path) {
+			n.Error = fmt.Errorf("%w not included by regex: %s", ErrExcludedPath, path)
+			return []Node{n}
+		}
+
 	}
 
 	// Detect the language of the media based on multiple factors.

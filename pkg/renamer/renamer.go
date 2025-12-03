@@ -165,8 +165,12 @@ func (r *renamer) Run(o source.Options) (err error) {
 			continue
 		}
 
-		log.Err(e.Error).Msgf("%s[%s]", prefix, e.Source)
-		errorsCount++
+		if errors.Is(e.Error, source.ErrExcludedPath) {
+			log.Warn().Err(e.Error).Msgf("%s[%s]", prefix, e.Source)
+		} else {
+			log.Err(e.Error).Msgf("%s[%s]", prefix, e.Source)
+			errorsCount++
+		}
 	}
 
 	e := log.Info()
