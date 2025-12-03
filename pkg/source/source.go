@@ -35,8 +35,9 @@ type Options struct {
 	ExcludeGlob string // A glob pattern to exclude files or directories
 	// TODO: add setting to prefer file name preference over parent directories when finding a match
 	Recursive bool // Whether to scan directories recursively
-	MinDepth  int  // Minimum directory depth to process
-	MaxDepth  int  // Maximum directory depth to process
+	Query     string
+	MinDepth  int // Minimum directory depth to process
+	MaxDepth  int // Maximum directory depth to process
 	// TODO: might be an options just for renaming and not sourcing
 	SkipDirectories bool // Whether to skip processing directories themselves
 }

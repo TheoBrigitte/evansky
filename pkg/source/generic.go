@@ -79,14 +79,19 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 		Path:  path,
 	}
 
+	name := entry.Name()
+	if g.options.Query != "" {
+		name = g.options.Query
+	}
+
 	// Parse current file or directory name to extract media information.
-	info, err := parser.Parse(entry.Name())
+	info, err := parser.Parse(name)
 	if err != nil {
-		n.Error = fmt.Errorf("failed to parse file name %s: %w", entry.Name(), err)
+		n.Error = fmt.Errorf("failed to parse file name %s: %w", name, err)
 		return []Node{n}
 	}
 
-	log.Debug().Str("path", path).Str("name", entry.Name()).Interface("info", info).Msg("parsed media info")
+	log.Debug().Str("path", path).Str("name", name).Interface("info", info).Msg("parsed media info")
 	n.Info = *info
 
 	// TODO: if we have more information than the parent request, backtrack and re-query the providers with the new information. Year is most important.
@@ -108,7 +113,7 @@ func (g *generic) walk(path string, entry fs.DirEntry, parentResp provider.Respo
 	if info.Year == 0 && info.Season == 0 && info.Episode == 0 {
 		// Parsing did not yield useful information, use the full name as query.
 		// This fixes an issue where some names are not parsed correctly.
-		req.Query = filepath.Base(parser.CleanTitle(entry.Name()))
+		req.Query = filepath.Base(parser.CleanTitle(name))
 		req.Query = strings.TrimSuffix(req.Query, filepath.Ext(req.Query))
 	}
 

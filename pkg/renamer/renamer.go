@@ -38,16 +38,16 @@ type renamer struct {
 }
 
 type Options struct {
-	Write      bool
 	Formatter  format.Formatter
-	RenameMode string
 	Output     string
+	RenameMode string
+	Write      bool
 }
 
 type Entry struct {
-	Source      string
 	Destination string
 	Error       error
+	Source      string
 }
 
 func New(paths []string, providers []provider.Interface, o Options) (Renamer, error) {

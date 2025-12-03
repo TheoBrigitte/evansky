@@ -26,6 +26,7 @@ var (
 	force      bool
 	language   string
 	output     string
+	query      string
 	renameMode string
 	write      bool
 )
@@ -35,6 +36,7 @@ func init() {
 	Cmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "skip confirmation")
 	Cmd.PersistentFlags().StringVar(&language, "language", "en", "language used for destination names (ISO 639-1 code)")
 	Cmd.PersistentFlags().StringVarP(&output, "output", "o", "", "output directory (default: same as source)")
+	Cmd.PersistentFlags().StringVar(&query, "query", "", "search query override")
 	Cmd.PersistentFlags().StringVar(&renameMode, "mode", "symlink", "rename mode: symlink, hardlink, copy, move")
 	Cmd.PersistentFlags().BoolVar(&write, "write", false, "actually perform the rename operation (default: false)")
 
@@ -62,8 +64,8 @@ func runner(cmd *cobra.Command, args []string) error {
 
 	renameOptions := renamer.Options{
 		Formatter:  formatter,
-		RenameMode: renameMode,
 		Output:     output,
+		RenameMode: renameMode,
 	}
 	if write {
 		renameOptions.Write = true
@@ -75,6 +77,7 @@ func runner(cmd *cobra.Command, args []string) error {
 	}
 
 	sourceOptions := source.Options{
+		Query:       query,
 		ExcludeGlob: exclude,
 	}
 
