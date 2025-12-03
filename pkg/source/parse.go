@@ -13,8 +13,8 @@ var (
 	seasonRegex = regexp.MustCompile(`([0-9]+)`)
 	// episodeRegex is a regular expression used to extract the episode number
 	// from episode file names for episode number detection.
-	// It works for common episode naming patterns like "01 - Episode Title", "1 - Episode Title", etc.
-	episodeRegex = regexp.MustCompile(`(^[0-9]{1,})\s`)
+	// It works for common episode naming patterns like "01 - Episode Title", "1 - Episode Title", "Episode Title - 01" etc.
+	episodeRegex = regexp.MustCompile(`(?:^|\W)([0-9]{1,})\W`)
 )
 
 // extractNumber extracts a numeric value from the input string using the provided regex.
