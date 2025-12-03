@@ -94,6 +94,23 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 		Path:  path,
 	}
 
+	if slices.Contains(g.excludes, path) {
+		n.Error = fmt.Errorf("%w by glob: %s", ErrExcludedPath, path)
+		return []Node{n}
+	}
+
+	if g.excludeRegex != nil && g.excludeRegex.MatchString(path) {
+		n.Error = fmt.Errorf("%w by regex: %s", ErrExcludedPath, path)
+		return []Node{n}
+	}
+
+	if g.includeRegex != nil && !g.includeRegex.MatchString(path) {
+		n.Error = fmt.Errorf("%w not included by regex: %s", ErrExcludedPath, path)
+		return []Node{n}
+	}
+
+	log.Info().Msgf("scanning %s", path)
+
 	// query default to file or directory name
 	query := entry.Name()
 	if g.options.Query != "" {
@@ -144,22 +161,6 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 			n.Error = fmt.Errorf("failed to read directory %s: %w", path, err)
 			return []Node{n}
 		}
-	} else {
-		if slices.Contains(g.excludes, path) {
-			n.Error = fmt.Errorf("%w by glob: %s", ErrExcludedPath, path)
-			return []Node{n}
-		}
-
-		if g.excludeRegex != nil && g.excludeRegex.MatchString(path) {
-			n.Error = fmt.Errorf("%w by regex: %s", ErrExcludedPath, path)
-			return []Node{n}
-		}
-
-		if g.includeRegex != nil && !g.includeRegex.MatchString(path) {
-			n.Error = fmt.Errorf("%w not included by regex: %s", ErrExcludedPath, path)
-			return []Node{n}
-		}
-
 	}
 
 	// Detect the language of the media based on multiple factors.
