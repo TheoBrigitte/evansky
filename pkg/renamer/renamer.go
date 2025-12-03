@@ -1,6 +1,7 @@
 package renamer
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"maps"
@@ -116,9 +117,10 @@ func (r *renamer) Run(o source.Options) (err error) {
 			}
 		}
 	}
-	slices.Sort(dirs)
 
+	// Create uniq directories
 	dirCount := 0
+	slices.Sort(dirs)
 	for _, dir := range slices.Compact(dirs) {
 		if r.o.Write {
 			err := os.MkdirAll(dir, 0o750)
@@ -134,28 +136,36 @@ func (r *renamer) Run(o source.Options) (err error) {
 	}
 
 	renamedCount := 0
-	for _, e := range entries {
-		if e.Error != nil {
+	uniqEntries := make(map[string]struct{})
+	for index := range entries {
+		if entries[index].Error != nil {
 			continue
 		}
 
-		realSrc := e.Source
+		if _, exists := uniqEntries[entries[index].Destination]; exists {
+			entries[index].Error = fmt.Errorf("duplicate destination path")
+			continue
+		}
+
+		realSrc := entries[index].Source
 		if r.o.RenameMode == "symlink" {
-			realSrc, err = getSymlinkSrc(e.Source, e.Destination)
+			realSrc, err = getSymlinkSrc(entries[index].Source, entries[index].Destination)
 			if err != nil {
-				e.Error = err
+				entries[index].Error = err
 				continue
 			}
 		}
 
 		// Perform the write operation
-		err := r.write(realSrc, e.Destination, w)
+		err := r.write(realSrc, entries[index].Destination, w)
 		if err != nil {
-			e.Error = err
+			entries[index].Error = err
 			continue
 		}
 
-		log.Info().Msgf("%s[%s] -> [%s]", prefix, e.Source, e.Destination)
+		uniqEntries[entries[index].Destination] = struct{}{}
+
+		log.Info().Msgf("%s[%s] -> [%s]", prefix, entries[index].Source, entries[index].Destination)
 		renamedCount++
 	}
 
