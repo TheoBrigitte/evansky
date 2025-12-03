@@ -1,9 +1,11 @@
 package tmdb
 
 import (
+	"math"
 	"time"
 
 	gotmdb "github.com/cyruzin/golang-tmdb"
+	"github.com/rs/zerolog/log"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
 )
@@ -70,6 +72,36 @@ func (r movie) GetDate() time.Time {
 
 func (r movie) GetPopularity() int {
 	return computePopularity(r.result.Popularity, r.result.VoteAverage, r.result.VoteCount)
+}
+
+func movieByClosestYear(year int, movies []gotmdb.MovieResult) gotmdb.MovieResult {
+	if year == 0 {
+		return movies[0]
+	}
+
+	var bestScore float64 = 0
+	var closestMatch gotmdb.MovieResult
+
+	for index, t := range movies {
+		date, err := time.Parse(time.DateOnly, t.ReleaseDate)
+		if err != nil {
+			log.Warn().Err(err).Msgf("failed to parse ReleaseDate: %s", t.ReleaseDate)
+			continue
+		}
+		score := computeClosetYearScore(year, date.Year(), index)
+		log.Debug().Msgf("comparing movie %s tmdbid=%d date=%s score=%f", t.Title, t.ID, t.ReleaseDate, score)
+
+		if bestScore == 0 || score < float64(bestScore) {
+			bestScore = score
+			closestMatch = t
+		}
+	}
+
+	return closestMatch
+}
+
+func computeClosetYearScore(targetYear int, actualYear int, index int) float64 {
+	return math.Abs(float64(targetYear-actualYear)+1) * (math.Log(float64(index + 2)))
 }
 
 func (m *movieResponse) InLanguage(req provider.Request) (provider.Response, error) {

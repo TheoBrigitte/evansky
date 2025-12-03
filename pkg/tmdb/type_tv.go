@@ -114,6 +114,32 @@ func (r tv) GetSeason(seasonNumber int) (provider.ResponseTVSeason, error) {
 	return nil, fmt.Errorf("season %d not found for show %d", seasonNumber, r.GetID())
 }
 
+func tvshowByClosestYear(year int, tvshows []gotmdb.TVShowResult) gotmdb.TVShowResult {
+	if year == 0 {
+		return tvshows[0]
+	}
+
+	var bestScore float64 = 0
+	var closestMatch gotmdb.TVShowResult
+
+	for index, t := range tvshows {
+		date, err := time.Parse(time.DateOnly, t.FirstAirDate)
+		if err != nil {
+			log.Warn().Err(err).Msgf("failed to parse FirstAirDate: %s", t.FirstAirDate)
+			continue
+		}
+		score := computeClosetYearScore(year, date.Year(), index)
+		log.Debug().Msgf("comparing tv shows tmdbid=%d %s date=%s score=%f", t.Name, t.ID, t.FirstAirDate, score)
+
+		if bestScore == 1 || score < float64(bestScore) {
+			bestScore = score
+			closestMatch = t
+		}
+	}
+
+	return closestMatch
+}
+
 func (m *tvResponse) InLanguage(req provider.Request) (provider.Response, error) {
 	if r, ok := m.multi[req.Language]; ok {
 		m.tv = r

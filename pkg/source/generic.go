@@ -182,7 +182,7 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 			return []Node{n}
 		}
 
-		log.Info().Str("name", resp.GetName()).Int("year", resp.GetDate().Year()).Str("type", fmt.Sprintf("%T", resp)).Msgf("found    %s", path)
+		log.Info().Int("id", resp.GetID()).Str("name", resp.GetName()).Int("year", resp.GetDate().Year()).Str("type", fmt.Sprintf("%T", resp)).Msgf("found    %s", path)
 
 		n.Response = resp
 		// This is a directory, continue walking.
@@ -360,7 +360,10 @@ func (g *generic) searchByYearOrPopularity(p provider.Interface, req provider.Re
 		}
 	}
 
-	if movie.GetPopularity() >= tvshow.GetPopularity() {
+	moviePopularity := movie.GetPopularity()
+	tvshowPopularity := tvshow.GetPopularity()
+	log.Debug().Int("movie_popularity", moviePopularity).Int("tvshow_popularity", tvshowPopularity).Msg("comparing movie and tv show popularity")
+	if moviePopularity >= tvshowPopularity {
 		// Movie is more popular than TV show.
 		return movie, nil
 	}

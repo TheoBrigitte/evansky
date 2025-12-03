@@ -1,9 +1,12 @@
 package tmdb
 
 import (
+	"fmt"
+	"slices"
 	"strconv"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
+	gotmdb "github.com/cyruzin/golang-tmdb"
 	"github.com/rs/zerolog/log"
 )
 
@@ -17,10 +20,16 @@ func (c *Client) SearchMovie(req provider.Request) (provider.ResponseMovie, erro
 		return nil, err
 	}
 	if len(movies.Results) <= 0 {
-		return nil, provider.ErrNoResult
+		return nil, fmt.Errorf("%w: %w", provider.ErrNoResult, err)
 	}
 
-	return c.newMovieResponse(movies.Results[0], req.Language)
+	slices.SortStableFunc(movies.Results, func(e1, e2 gotmdb.MovieResult) int {
+		e1Score := computePopularity(e1.Popularity, e1.VoteAverage, e1.VoteCount)
+		e2Score := computePopularity(e2.Popularity, e2.VoteAverage, e2.VoteCount)
+		return e2Score - e1Score
+	})
+
+	return c.newMovieResponse(movieByClosestYear(req.Year, movies.Results), req.Language)
 }
 
 // SearchTV search for tv shows using query and year (if provided).
@@ -33,10 +42,16 @@ func (c *Client) SearchTV(req provider.Request) (provider.ResponseTV, error) {
 		return nil, err
 	}
 	if len(tvshows.Results) <= 0 {
-		return nil, provider.ErrNoResult
+		return nil, fmt.Errorf("%w: %w", provider.ErrNoResult, err)
 	}
 
-	return c.newTVResponse(tvshows.Results[0], req)
+	slices.SortStableFunc(tvshows.Results, func(e1, e2 gotmdb.TVShowResult) int {
+		e1Score := computePopularity(e1.Popularity, e1.VoteAverage, e1.VoteCount)
+		e2Score := computePopularity(e2.Popularity, e2.VoteAverage, e2.VoteCount)
+		return e2Score - e1Score
+	})
+
+	return c.newTVResponse(tvshowByClosestYear(req.Year, tvshows.Results), req)
 }
 
 // searchMulti search for multi media using query.
