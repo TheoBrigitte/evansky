@@ -17,40 +17,61 @@ import (
 )
 
 var (
+	// deduplicationAttemptLimit defines the maximum number of attempts to deduplicate
+	// destination paths by appending suffixes
 	deduplicationAttemptLimit = 2
-	deduplicationSuffix       = "_"
+	// deduplicationSuffix is the string appended to filenames when resolving path conflicts
+	deduplicationSuffix = "_"
 )
 
+// Renamer defines the interface for renaming media files based on provider metadata.
 type Renamer interface {
+	// Run executes the renaming process with the given source options
 	Run(source.Options) error
 }
 
+// renamer implements the Renamer interface and manages the state of the renaming process.
 type renamer struct {
-	// List of directories to create
+	// directories tracks directories that need to be created
 	directories map[string]struct{}
 
-	// List of files to create (source -> destination)
-	files  map[string]string
+	// files maps source paths to their destination paths
+	files map[string]string
+	// errors tracks errors encountered during entry generation
 	errors map[string]error
 
-	o         Options
-	paths     []string
+	// o contains the configuration options for the renamer
+	o Options
+	// paths contains the source paths to scan for media files
+	paths []string
+	// providers contains the metadata providers to use for lookups
 	providers []provider.Interface
 }
 
+// Options configures the behavior of the renamer.
 type Options struct {
-	Formatter  format.Formatter
-	Output     string
+	// Formatter defines how to format the destination filenames
+	Formatter format.Formatter
+	// Output specifies the base directory for renamed files
+	Output string
+	// RenameMode determines how files are renamed ("symlink" or "copy")
 	RenameMode string
-	Write      bool
+	// Write enables actual file operations; false enables dry-run mode
+	Write bool
 }
 
+// Entry represents a single file rename operation.
 type Entry struct {
+	// Destination is the target path for the renamed file
 	Destination string
-	Error       error
-	Source      string
+	// Error contains any error encountered while processing this entry
+	Error error
+	// Source is the original path of the file
+	Source string
 }
 
+// New creates a new Renamer instance with the given paths, providers, and options.
+// It returns an error if no paths or providers are specified.
 func New(paths []string, providers []provider.Interface, o Options) (Renamer, error) {
 	if len(paths) == 0 {
 		return nil, fmt.Errorf("at least one source is required")
@@ -71,12 +92,16 @@ func New(paths []string, providers []provider.Interface, o Options) (Renamer, er
 	return r, nil
 }
 
+// Run executes the renaming process by scanning paths, generating entries,
+// creating directories, and performing rename operations based on the configured mode.
 func (r *renamer) Run(o source.Options) (err error) {
+	// log output prefix
 	prefix := ""
 	if !r.o.Write {
 		prefix = "[dry-run] "
 	}
 
+	// Select the appropriate writer function based on the rename mode
 	var w writer
 	switch r.o.RenameMode {
 	case "symlink":
@@ -89,6 +114,7 @@ func (r *renamer) Run(o source.Options) (err error) {
 
 	log.Info().Int("providers", len(r.providers)).Msgf("scanning %d path(s)", len(r.paths))
 
+	// Scan all paths and collect inforations for renaming
 	nodes := make(map[string][]source.Node)
 	for _, path := range r.paths {
 		output := r.o.Output
@@ -106,6 +132,7 @@ func (r *renamer) Run(o source.Options) (err error) {
 		return nil
 	}
 
+	// Generate rename entries using formatter and collected nodes
 	entries := []Entry{}
 	dirs := []string{}
 	for output, nodes := range nodes {
@@ -118,7 +145,7 @@ func (r *renamer) Run(o source.Options) (err error) {
 		}
 	}
 
-	// Create uniq directories
+	// Start renaming by creating necessary uniq directories
 	dirCount := 0
 	slices.Sort(dirs)
 	for _, dir := range slices.Compact(dirs) {
@@ -135,18 +162,22 @@ func (r *renamer) Run(o source.Options) (err error) {
 		log.Info().Msgf("%screated %d directories", prefix, dirCount)
 	}
 
+	// Rename files
 	renamedCount := 0
 	uniqEntries := make(map[string]struct{})
+	// use index here to be able to set error on the entry
 	for index := range entries {
 		if entries[index].Error != nil {
 			continue
 		}
 
+		// Check for duplicate destination paths
 		if _, exists := uniqEntries[entries[index].Destination]; exists {
 			entries[index].Error = fmt.Errorf("duplicate destination path")
 			continue
 		}
 
+		// Prepare symlink source if needed
 		realSrc := entries[index].Source
 		if r.o.RenameMode == "symlink" {
 			realSrc, err = getSymlinkSrc(entries[index].Source, entries[index].Destination)
@@ -169,6 +200,7 @@ func (r *renamer) Run(o source.Options) (err error) {
 		renamedCount++
 	}
 
+	// Print summary of errors and renamed files
 	errorsCount := 0
 	for _, e := range entries {
 		if e.Error == nil {
@@ -195,6 +227,8 @@ func (r *renamer) Run(o source.Options) (err error) {
 	return nil
 }
 
+// generateEntry creates an Entry from a source node by formatting the destination path
+// based on the node's metadata. It returns the entry and any parent directory to create.
 func (r *renamer) generateEntry(node source.Node, output string) (e Entry, dir string) {
 	e.Source = node.Path
 
@@ -203,6 +237,7 @@ func (r *renamer) generateEntry(node source.Node, output string) (e Entry, dir s
 		return
 	}
 
+	// Call the appropriate formatter method based on the response type
 	components := []string{}
 	switch resp := node.Response.(type) {
 	case provider.ResponseMovie:
@@ -222,6 +257,7 @@ func (r *renamer) generateEntry(node source.Node, output string) (e Entry, dir s
 		return
 	}
 
+	// Read file extension if not a directory
 	var extension string
 	if !node.Entry.IsDir() {
 		extension = filepath.Ext(node.Entry.Name())
@@ -240,11 +276,16 @@ func (r *renamer) generateEntry(node source.Node, output string) (e Entry, dir s
 		dir = filepath.Dir(newPathWithExt)
 	}
 
+	// Check for duplicate source paths
+	// TODO: move this outside of this function, to avoid using r.files state
 	if _, exists := r.files[node.Path]; exists {
 		e.Error = fmt.Errorf("duplicate source path")
 		return
 	}
 
+	// Ensure destination path is unique
+	// If another file is already using the same destination,
+	// attempt deduplication by appending deduplicationSuffix x deduplicationAttemptLimit times
 	for i := 0; i <= deduplicationAttemptLimit; i++ {
 		exists := slices.Contains(slices.Collect(maps.Values(r.files)), newPathWithExt)
 		if !exists {
@@ -260,8 +301,10 @@ func (r *renamer) generateEntry(node source.Node, output string) (e Entry, dir s
 	return
 }
 
+// writer is a function type that performs the actual file operation (symlink or copy).
 type writer func(string, string) error
 
+// write executes the writer function if Write mode is enabled, otherwise does nothing.
 func (r *renamer) write(src, dst string, fn writer) error {
 	if !r.o.Write || fn == nil {
 		return nil
@@ -270,6 +313,7 @@ func (r *renamer) write(src, dst string, fn writer) error {
 	return fn(src, dst)
 }
 
+// getSymlinkSrc calculates the relative path from dst to src for creating a symlink.
 func getSymlinkSrc(src, dst string) (string, error) {
 	absSrc, err := filepath.Abs(src)
 	if err != nil {
@@ -287,6 +331,7 @@ func getSymlinkSrc(src, dst string) (string, error) {
 	return realSrc, nil
 }
 
+// copyFile copies a regular file from src to dst.
 func copyFile(src, dst string) error {
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
