@@ -129,9 +129,9 @@ func tvshowByClosestYear(year int, tvshows []gotmdb.TVShowResult) gotmdb.TVShowR
 			continue
 		}
 		score := computeClosetYearScore(year, date.Year(), index)
-		log.Debug().Msgf("comparing tv shows tmdbid=%d %s date=%s score=%f", t.Name, t.ID, t.FirstAirDate, score)
+		log.Debug().Msgf("comparing tv shows %s tmdbid=%d date=%s score=%f", t.Name, t.ID, t.FirstAirDate, score)
 
-		if bestScore == 1 || score < float64(bestScore) {
+		if bestScore == 0 || score < float64(bestScore) {
 			bestScore = score
 			closestMatch = t
 		}
