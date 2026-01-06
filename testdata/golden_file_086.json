@@ -1,8 +1,9 @@
 {
-  "Title": "Tortues Ninja - les chevaliers d’ecaille S01 VOF",
+  "Title": "Tortues Ninja - les chevaliers d’ecaille",
+  "season": 1,
   "resolution": "720p",
   "quality": "HDTV",
-  "codec": "x265",
   "audio": "AAC",
+  "codec": "x265",
   "group": "DeSs"
 }

@@ -103,6 +103,9 @@ var testData = []string{
 	"Dragon Ball Z 1989-1996 [30Th Anniversary] REMASTERED Intégral (291EP) NC MULTI 1080p HDLight BluRay AC3 x265-Thebatou8652",
 	"Tortues Ninja - les chevaliers d’ecaille S01 VOF 720p HDTV AAC 2.0 x265-DeSs",
 	"Cuisine et dependances (1993) - 1080p FR x264 ac3 mHDgz.mkv",
+	"Hook.ou.la.revanche.du capit.crochet.1992.vff.BDrip.720p..x264.aac.mkv",
+	"L Ile.au.tresor.VF.1950.Disney.webdl.1080p.x264.ac3.avi",
+	"Asterix.et.Obelix.Le.Combat.des.Chefs.S01E01.FRENCH.HDR.DV.1080p.WEB.H265-FW.mkv",
 }
 
 func TestParser(t *testing.T) {
