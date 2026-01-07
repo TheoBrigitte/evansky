@@ -37,7 +37,8 @@ var patterns = []struct {
 	{"quality", false, reflect.String, regexp.MustCompile(`(?i)\b(((?:PPV\.)?[HP]DTV|(?:HD)?CAM|B[DR]Rip|(?:HD-?)?TS|(?:PPV )?WEB-?DL(?: DVDRip)?|HDRip|DVDRip|DVDRIP|CamRip|W[EB]BRip|BluRay|DvDScr|telesync|WEB))\b`)},
 	// Codec like x264, x265, h264, h265, XviD
 	{"codec", false, reflect.String, regexp.MustCompile(`(?i)\b((xvid|[hx]\.?26[45]))\b`)},
-	{"audio", false, reflect.String, regexp.MustCompile(`(?i)\b((MP3|DD5\.?1|Dual[\- ]Audio|LiNE|DTS|AAC[.-]LC|AAC(?:\.?2\.0)?|AC3(?:\.5\.1)?))\b`)},
+	// Audio like MP3, DD5.1, Dual-Audio, LiNE, DTS, AAC-LC, AC3.5.1
+	{"audio", false, reflect.String, regexp.MustCompile(`(?i)\b((MP3|DD5\.?1|Dual[\- ]Audio|LiNE|DTS|AAC[.-]LC|AAC(?:\.?2\.0)?|AC3(?:\W{0,3}5\.1)?))\b`)},
 	// Region like R1, R2, R3, R4, R5, R6
 	{"region", false, reflect.String, regexp.MustCompile(`(?i)\b(R([0-9]))\b`)},
 	// Size like 700MB, 1.4GB, 2GB
