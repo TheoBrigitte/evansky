@@ -3,6 +3,7 @@ package parsetorrentname
 import (
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -38,6 +39,7 @@ type TorrentInfo struct {
 
 var (
 	titleCaser   = cases.Title(language.English, cases.NoLower)
+	titlePattern = regexp.MustCompile(`^(.+?) ?[^\w.]?$`)
 
 	debug = true
 )
@@ -69,12 +71,14 @@ func Parse(filename string) (*TorrentInfo, error) {
 	// tor holds the resulting parsed information
 	tor := &TorrentInfo{}
 
-	cleanName := strings.Replace(filename, "_", " ", -1)
 	// titleStartIndex and titleEndIndex hold the indexes for the title extraction
 	titleStartIndex, titleEndIndex := 0, len(filename)
 	if debug {
 		fmt.Printf("filename %q\n", filename)
 	}
+
+	// cleanName is the filename with underscores replaced by spaces
+	cleanName := strings.ReplaceAll(filename, "_", " ")
 
 	// Process all patterns
 	patternMatches := make(map[string]string)
@@ -159,7 +163,7 @@ func Parse(filename string) (*TorrentInfo, error) {
 
 func CleanTitle(raw string) string {
 	// Remove leading and trailing spaces and dashes
-	cleanName := strings.Trim(raw, " -")
+	cleanName := strings.Trim(raw, " _-[](){}")
 
 	if strings.ContainsRune(cleanName, '.') && !strings.ContainsRune(cleanName, ' ') {
 		// If there are dots but no spaces, replace dots with spaces
@@ -169,7 +173,16 @@ func CleanTitle(raw string) string {
 		cleanName = strings.ReplaceAll(cleanName, ".", " ")
 	}
 
-	// Replace underscores with spaces
+	//// Replace underscores with spaces
+	//titleMatches := titlePattern.FindStringSubmatch(cleanName)
+	//if debug {
+	//	fmt.Printf("    titleMatches: %#v\n", titleMatches)
+	//}
+	//if len(titleMatches) <= 1 {
+	//	return ""
+	//}
+	//cleanName = strings.ReplaceAll(titleMatches[1], "_", " ")
+
 	cleanName = strings.ReplaceAll(cleanName, "_", " ")
 
 	// cleanName = re.sub('([\[\(_]|- )$', '', cleanName).strip()
