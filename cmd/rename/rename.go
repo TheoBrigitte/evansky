@@ -23,29 +23,24 @@ var (
 		Args: cobra.MinimumNArgs(1),
 	}
 
-	excludeGlob     string
-	excludeRegex    string
-	includeRegex    string
-	force           bool
-	language        string
-	output          string
-	query           string
-	stripComponents int
-	renameMode      string
-	write           bool
+	flags *Flags
 )
 
 func init() {
-	Cmd.PersistentFlags().StringVar(&excludeGlob, "exclude", "", "exclude files matching the given glob pattern")
-	Cmd.PersistentFlags().StringVar(&excludeRegex, "exclude-regex", "", "exclude files matching the given regular expression")
-	Cmd.PersistentFlags().StringVar(&includeRegex, "include-regex", "", "include files matching the given regular expression")
-	Cmd.PersistentFlags().BoolVarP(&force, "force", "f", false, "skip confirmation")
-	Cmd.PersistentFlags().StringVar(&language, "language", "en", "language used for destination names (ISO 639-1 code)")
-	Cmd.PersistentFlags().StringVarP(&output, "output", "o", "", "output directory (default: same as source)")
-	Cmd.PersistentFlags().StringVar(&query, "query", "", "search query override")
-	Cmd.PersistentFlags().StringVar(&renameMode, "mode", "symlink", "rename mode: symlink, hardlink, copy, move")
-	Cmd.PersistentFlags().IntVar(&stripComponents, "strip-components", 0, "number of leading path components to strip from source paths")
-	Cmd.PersistentFlags().BoolVar(&write, "write", false, "actually perform the rename operation (default: false)")
+	flags = NewFlags()
+
+	Cmd.PersistentFlags().StringVar(&flags.excludeGlob, "exclude", "", "exclude files matching the given glob pattern")
+	Cmd.PersistentFlags().StringVar(&flags.excludeRegex, "exclude-regex", "", "exclude files matching the given regular expression")
+	Cmd.PersistentFlags().StringVar(&flags.includeRegex, "include-regex", "", "include files matching the given regular expression")
+	Cmd.PersistentFlags().BoolVarP(&flags.force, "force", "f", false, "overwrite existing destination files")
+	Cmd.PersistentFlags().StringVar(&flags.language, "language", "en", "language used for destination names (ISO 639-1 code)")
+	Cmd.PersistentFlags().StringSliceVar(&flags.mediaExtensions, "media-ext", []string{"mkv", "mp4", "avi", "mov", "wmv", "flv", "mpg", "mpeg"}, "media file extensions to consider")
+	Cmd.PersistentFlags().StringVarP(&flags.output, "output", "o", "", "output directory (default: same as source)")
+	Cmd.PersistentFlags().StringVar(&flags.query, "query", "", "search query override")
+	Cmd.PersistentFlags().StringVar(&flags.renameMode, "mode", "symlink", "rename mode: symlink, hardlink, copy, move")
+	Cmd.PersistentFlags().IntVar(&flags.stripComponents, "strip-components", 0, "number of leading path components to strip from source paths")
+	Cmd.PersistentFlags().StringSliceVar(&flags.subtitleExtensions, "subtitle-ext", []string{"srt", "idx", "sub"}, "subtitles extensions to consider")
+	Cmd.PersistentFlags().BoolVar(&flags.write, "write", false, "actually perform the rename operation (default: false)")
 
 	register.Initialize(Cmd)
 }
@@ -58,24 +53,24 @@ func runner(cmd *cobra.Command, args []string) error {
 
 	formatter := format.NewJellyfinFormatter()
 
-	if output != "" {
-		info, err := os.Lstat(output)
+	if flags.output != "" {
+		info, err := os.Lstat(flags.output)
 		if err != nil && !os.IsNotExist(err) {
 			return err
 		}
 		if err == nil && !info.IsDir() {
-			return fmt.Errorf("output is not a directory: %s", output)
+			return fmt.Errorf("output is not a directory: %s", flags.output)
 		}
-		output = filepath.Clean(output)
+		flags.output = filepath.Clean(flags.output)
 	}
 
 	renameOptions := renamer.Options{
-		Force:      force,
+		Force:      flags.force,
 		Formatter:  formatter,
-		Output:     output,
-		RenameMode: renameMode,
+		Output:     flags.output,
+		RenameMode: flags.renameMode,
 	}
-	if write {
+	if flags.write {
 		renameOptions.Write = true
 	}
 
@@ -85,11 +80,13 @@ func runner(cmd *cobra.Command, args []string) error {
 	}
 
 	sourceOptions := source.Options{
-		Query:           query,
-		ExcludeGlob:     excludeGlob,
-		ExcludeRegex:    excludeRegex,
-		IncludeRegex:    includeRegex,
-		StripComponents: stripComponents,
+		Query:           flags.query,
+		ExcludeGlob:     flags.excludeGlob,
+		ExcludeRegex:    flags.excludeRegex,
+		IncludeRegex:    flags.includeRegex,
+		MediaExts:       flags.mediaExtensions,
+		SubtitleExts:    flags.subtitleExtensions,
+		StripComponents: flags.stripComponents,
 	}
 
 	return r.Run(sourceOptions)
