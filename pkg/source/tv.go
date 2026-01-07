@@ -125,7 +125,7 @@ func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.Respons
 
 	log.Debug().Int("seasons", len(seasons)).Int("season", req.Info.Season).Int("episode", req.Info.Episode).Msgf("findTVEpisode: searching for episode in title: %s", name)
 	if req.Info.Episode > 0 {
-		if req.Info.Season < 0 {
+		if req.Info.Season <= 0 {
 			// Season number is invalid, try absolute numbering
 			return g.findTVEpisodeAbsoluteNumber(p, seasons, req)
 		}
