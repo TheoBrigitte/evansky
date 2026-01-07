@@ -23,10 +23,15 @@ type Source interface {
 // It contains the original path, the file info and
 // metadata retrieved from providers.
 type Node struct {
-	Entry    fs.DirEntry
-	Error    error
-	Info     parser.Info
-	Path     string
+	// Entry is the file system entry information.
+	Entry fs.DirEntry
+	// Error indicates if there was an error processing this node.
+	Error error
+	// Info contains the parsed information about the file.
+	Info parser.Info
+	// Path is the original file or directory path.
+	Path string
+	// Responses holds metadata responses from provider.
 	Response provider.Response
 }
 
