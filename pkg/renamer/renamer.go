@@ -198,7 +198,7 @@ func (r *renamer) Run(o source.Options) (err error) {
 
 		uniqEntries[entries[index].Destination] = struct{}{}
 
-		log.Info().Msgf("%s[%s] -> [%s]", prefix, entries[index].Source, entries[index].Destination)
+		log.Info().Msgf("%s[%s]\nrenamed to %s[%s]", prefix, entries[index].Source, prefix, entries[index].Destination)
 		renamedCount++
 	}
 
