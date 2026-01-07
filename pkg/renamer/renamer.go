@@ -240,7 +240,7 @@ func (r *renamer) generateEntry(node source.Node, output string) (e Entry, dir s
 	}
 
 	// Call the appropriate formatter method based on the response type
-	components := []string{}
+	var components []string
 	switch resp := node.Response.(type) {
 	case provider.ResponseMovie:
 		components = r.o.Formatter.Movie(resp)

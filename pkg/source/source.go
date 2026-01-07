@@ -40,6 +40,8 @@ type Options struct {
 	ExcludeGlob  string // A glob pattern to exclude files or directories
 	ExcludeRegex string // A regex pattern to exclude files or directories
 	IncludeRegex string // A regex pattern to include files or directories
+	MediaExts    []string
+	SubtitleExts []string
 	// TODO: add setting to prefer file name preference over parent directories when finding a match
 	Recursive     bool   // Whether to scan directories recursively
 	Query         string // Query override for metadata retrieval

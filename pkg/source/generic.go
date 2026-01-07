@@ -17,7 +17,10 @@ import (
 	"github.com/TheoBrigitte/evansky/pkg/source/language"
 )
 
-var ErrExcludedPath = errors.New("excluded path")
+var (
+	ErrExcludedPath = errors.New("excluded path")
+	ErrRetryable    = errors.New("retryable error")
+)
 
 // generic implements a generic source that can handle both movies and TV shows.
 // It provides functionality to scan directory structures, parse media information,
@@ -79,7 +82,7 @@ func (g *generic) scan() ([]Node, error) {
 	}
 
 	// Start walking the directory tree.
-	return g.walk(g.path, dirInfo, 0, nil), nil
+	return g.walk(g.path, dirInfo, 0, nil, nil), nil
 }
 
 // walk recursively walks the directory tree and processes each file or directory.
@@ -88,7 +91,7 @@ func (g *generic) scan() ([]Node, error) {
 // 2. Detects the language based on directory contents
 // 3. Queries metadata providers to get accurate information
 // 4. Generates nodes for files or continues recursion for directories
-func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp provider.Response) []Node {
+func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp provider.Response, siblingNodes []Node) []Node {
 	n := Node{
 		Entry: entry,
 		Path:  path,
@@ -109,11 +112,17 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 		return []Node{n}
 	}
 
+	extension := strings.TrimPrefix(strings.ToLower(filepath.Ext(entry.Name())), ".")
+	switch {
+	case slices.Contains(g.options.MediaExts, extension):
+	case slices.Contains(g.options.SubtitleExts, extension):
+	}
+
 	log.Info().Msgf("scanning %s", path)
 
 	// query default to file or directory name
 	query := entry.Name()
-	if g.options.Query != "" {
+	if g.options.Query != "" && depth == 0 {
 		// use user provided query override if set
 		query = g.options.Query
 	}
@@ -224,7 +233,7 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 		// Build the next path as: current path + entry name.
 		nextPath := filepath.Join(path, nextEntry.Name())
 		// TODO: allow for non-recursive scan
-		childNodes := g.walk(nextPath, nextEntry, depth, resp)
+		childNodes := g.walk(nextPath, nextEntry, depth, resp, nodes)
 		if childNodes == nil {
 			continue
 		}
@@ -378,6 +387,16 @@ func (g *generic) searchByYearOrPopularity(p provider.Interface, req provider.Re
 
 	// TV show is more popular than movie.
 	return tvshow, nil
+}
+
+func (g *generic) findValidNode(nodes []Node) *Node {
+	for _, n := range nodes {
+		if n.Error == nil {
+			return &n
+		}
+	}
+
+	return nil
 }
 
 // usePreviousLanguage copies the language setting from a previous request to maintain
