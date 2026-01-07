@@ -51,7 +51,8 @@ var patterns = []struct {
 	// Container like mkv, avi, mp4
 	{"container", false, reflect.String, regexp.MustCompile(`(?i)\b((mkv|avi|mp4))\b`)},
 
-	{"group", false, reflect.String, regexp.MustCompile(`\b(- ?([^-]+(?:-={[^-]+-?$)?))$`)},
+	// Group like YIFY, RARBG, SPARKS, FoV, KILLERS
+	{"group", false, reflect.String, regexp.MustCompile(`(- ?(.+?))+(?:\.\w+)?$`)},
 
 	{"extended", false, reflect.Bool, regexp.MustCompile(`(?i)\b(EXTENDED(:?.CUT)?)\b`)},
 	{"hardcoded", false, reflect.Bool, regexp.MustCompile(`(?i)\b((HC))\b`)},
