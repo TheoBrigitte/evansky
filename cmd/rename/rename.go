@@ -37,6 +37,7 @@ func init() {
 	Cmd.PersistentFlags().StringSliceVar(&flags.mediaExtensions, "media-ext", []string{"mkv", "mp4", "avi", "mov", "wmv", "flv", "mpg", "mpeg"}, "media file extensions to consider")
 	Cmd.PersistentFlags().StringVarP(&flags.output, "output", "o", "", "output directory (default: same as source)")
 	Cmd.PersistentFlags().StringVar(&flags.query, "query", "", "search query override")
+	Cmd.PersistentFlags().StringVar(&flags.queryLanguage, "query-language", "", "language query override")
 	Cmd.PersistentFlags().StringVar(&flags.renameMode, "mode", "symlink", "rename mode: symlink, hardlink, copy, move")
 	Cmd.PersistentFlags().IntVar(&flags.stripComponents, "strip-components", 0, "number of leading path components to strip from source paths")
 	Cmd.PersistentFlags().StringSliceVar(&flags.subtitleExtensions, "subtitle-ext", []string{"srt", "idx", "sub"}, "subtitles extensions to consider")
@@ -81,6 +82,8 @@ func runner(cmd *cobra.Command, args []string) error {
 
 	sourceOptions := source.Options{
 		Query:           flags.query,
+		QueryLanguage:   flags.queryLanguage,
+		Language:        flags.language,
 		ExcludeGlob:     flags.excludeGlob,
 		ExcludeRegex:    flags.excludeRegex,
 		IncludeRegex:    flags.includeRegex,

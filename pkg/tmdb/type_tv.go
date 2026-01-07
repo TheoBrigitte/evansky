@@ -55,7 +55,7 @@ func (m *tvResponse) init(result gotmdb.TVShowResult, req provider.Request) erro
 		m.tv.firstAirDate = firstAirDate
 	}
 
-	languageQuery := buildLanguageQuery(req)
+	languageQuery := buildLanguageQuery(req.DestinationLanguage)
 	resp, err := m.client.client.GetTVDetails(m.GetID(), languageQuery)
 	if err != nil {
 		return err
@@ -76,7 +76,7 @@ func (m *tvResponse) init(result gotmdb.TVShowResult, req provider.Request) erro
 	}
 	m.tv.seasons = seasons
 	log.Debug().Msgf("TV show %d seasons loaded: %d", m.GetID(), len(m.seasons))
-	m.multi[req.Language] = m.tv
+	m.multi[req.DestinationLanguage] = m.tv
 
 	return nil
 }
@@ -141,11 +141,11 @@ func tvshowByClosestYear(year int, tvshows []gotmdb.TVShowResult) gotmdb.TVShowR
 }
 
 func (m *tvResponse) InLanguage(req provider.Request) (provider.Response, error) {
-	if r, ok := m.multi[req.Language]; ok {
+	if r, ok := m.multi[req.DestinationLanguage]; ok {
 		m.tv = r
 	} else {
 
-		languageQuery := buildLanguageQuery(req)
+		languageQuery := buildLanguageQuery(req.DestinationLanguage)
 		details, err := m.client.client.GetTVDetails(m.GetID(), languageQuery)
 		if err != nil {
 			return nil, err

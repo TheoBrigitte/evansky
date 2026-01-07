@@ -83,11 +83,11 @@ func (r tvEpisode) GetSeason() provider.ResponseTVSeason {
 }
 
 func (m *tvEpisodeResponse) InLanguage(req provider.Request) (provider.Response, error) {
-	if r, ok := m.multi[req.Language]; ok {
+	if r, ok := m.multi[req.DestinationLanguage]; ok {
 		m.tvEpisode = r
 	} else {
 
-		languageQuery := buildLanguageQuery(req)
+		languageQuery := buildLanguageQuery(req.DestinationLanguage)
 		details, err := m.client.GetTVEpisodeDetails(m.GetSeason().GetShow().GetID(), m.GetSeason().GetSeasonNumber(), m.GetID(), languageQuery)
 		if err != nil {
 			return nil, err
@@ -98,7 +98,7 @@ func (m *tvEpisodeResponse) InLanguage(req provider.Request) (provider.Response,
 			return nil, err
 		}
 
-		m.multi[req.Language] = e
+		m.multi[req.DestinationLanguage] = e
 		m.tvEpisode = e
 	}
 

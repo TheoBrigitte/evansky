@@ -9,6 +9,7 @@ type Flags struct {
 	mediaExtensions    []string
 	output             string
 	query              string
+	queryLanguage      string
 	renameMode         string
 	stripComponents    int
 	subtitleExtensions []string

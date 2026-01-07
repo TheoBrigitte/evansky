@@ -166,9 +166,17 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 	// Detect the language of the media based on multiple factors.
 	// confidence is only used for logging purposes.
 	lang, confidence, childLang := language.Detect(req, dirs)
-	req.Language = lang
+	req.QueryLanguage = lang
+
+	// Override language if query language is set.
+	if g.options.QueryLanguage != "" {
+		req.QueryLanguage = g.options.QueryLanguage
+	}
+
+	req.DestinationLanguage = g.options.Language
+
 	// slog.Debug("processing", "info", info, "request", req, "path", path, "confidence", lang.Confidence, "reliable", lang.IsReliable())
-	log.Debug().Str("language", req.Language).Float64("confidence", confidence).Msgf("detected language")
+	log.Debug().Str("language", req.QueryLanguage).Float64("confidence", confidence).Msgf("detected language")
 
 	var resp provider.Response
 	if g.options.StripComponents <= depth {
@@ -188,7 +196,7 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 		// This is a directory, continue walking.
 		// Enforce the detected language for child entries, as this is more accurate since
 		// language was detected over all child entries.
-		req.Language = childLang
+		req.QueryLanguage = childLang
 		resp.SetRequest(req)
 	} else {
 		log.Debug().Msgf("skipping entry due to strip components setting (depth %d, strip %d): %s", depth, g.options.StripComponents, path)
@@ -253,7 +261,7 @@ func (g *generic) Find(req provider.Request) (provider.Response, error) {
 // - For TV show: searches for seasons or episodes based on available information
 // - For movies: returns the movie response directly
 func (g *generic) find(p provider.Interface, req provider.Request) (provider.Response, error) {
-	log.Debug().Str("query", req.Query).Int("year", req.Year).Str("language", req.Language).Int("season", req.Info.Season).Int("episode", req.Info.Episode).Str("response", fmt.Sprintf("%T", req.Response)).Msgf("finding media")
+	log.Debug().Str("query", req.Query).Int("year", req.Year).Str("language", req.QueryLanguage).Int("season", req.Info.Season).Int("episode", req.Info.Episode).Str("response", fmt.Sprintf("%T", req.Response)).Msgf("finding media")
 	if req.Response == nil {
 		// Processing a top level media (no previous response).
 
@@ -381,10 +389,10 @@ func (g *generic) usePreviousLanguage(req provider.Request) provider.Request {
 	}
 
 	prevReq := req.Response.GetRequest()
-	if prevReq == nil || prevReq.Language == "" {
+	if prevReq == nil || prevReq.QueryLanguage == "" {
 		return req
 	}
 
-	req.Language = prevReq.Language
+	req.QueryLanguage = prevReq.QueryLanguage
 	return req
 }

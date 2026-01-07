@@ -105,10 +105,10 @@ func computeClosetYearScore(targetYear int, actualYear int, index int) float64 {
 }
 
 func (m *movieResponse) InLanguage(req provider.Request) (provider.Response, error) {
-	if r, ok := m.multi[req.Language]; ok {
+	if r, ok := m.multi[req.DestinationLanguage]; ok {
 		m.movie = r
 	} else {
-		languageQuery := buildLanguageQuery(req)
+		languageQuery := buildLanguageQuery(req.DestinationLanguage)
 		details, err := m.client.GetMovieDetails(m.GetID(), languageQuery)
 		if err != nil {
 			return nil, err
@@ -135,7 +135,7 @@ func (m *movieResponse) InLanguage(req provider.Request) (provider.Response, err
 			return nil, err
 		}
 
-		m.multi[req.Language] = movie
+		m.multi[req.DestinationLanguage] = movie
 		m.movie = movie
 	}
 

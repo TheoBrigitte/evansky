@@ -95,7 +95,7 @@ func Detect(req provider.Request, entries []os.DirEntry) (string, float64, strin
 		return "en", -1, childLang
 	}
 
-	return prevReq.Language, -1, childLang
+	return prevReq.QueryLanguage, -1, childLang
 
 	// lang, confidence := Lingua(req.Query)
 	// return strings.ToLower(lang), confidence

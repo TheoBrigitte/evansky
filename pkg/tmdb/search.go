@@ -19,7 +19,7 @@ func (c *Client) SearchMovie(req provider.Request) (provider.ResponseMovie, erro
 	if err != nil && errors.Is(err, provider.ErrNoResult) {
 		// Try again without year and language filters
 		req.Year = 0
-		req.Language = ""
+		req.QueryLanguage = ""
 		movies, err = c.searchMovie(req)
 		if err != nil {
 			return nil, err
@@ -32,7 +32,7 @@ func (c *Client) SearchMovie(req provider.Request) (provider.ResponseMovie, erro
 		return e2Score - e1Score
 	})
 
-	return c.newMovieResponse(movieByClosestYear(req.Year, movies.Results), req.Language)
+	return c.newMovieResponse(movieByClosestYear(req.Year, movies.Results), req.QueryLanguage)
 }
 
 func (c *Client) searchMovie(req provider.Request) (*gotmdb.SearchMovies, error) {
@@ -56,7 +56,7 @@ func (c *Client) SearchTV(req provider.Request) (provider.ResponseTV, error) {
 	if err != nil && errors.Is(err, provider.ErrNoResult) {
 		// Try again without year and language filters
 		req.Year = 0
-		req.Language = ""
+		req.QueryLanguage = ""
 		tvshows, err = c.searchTV(req)
 		if err != nil {
 			return nil, err
@@ -119,16 +119,16 @@ func buildAdditionalQuery(req provider.Request) map[string]string {
 	if req.Year != 0 {
 		additionalQuery["year"] = strconv.Itoa(req.Year)
 	}
-	if req.Language != "" {
-		additionalQuery["language"] = req.Language
+	if req.QueryLanguage != "" {
+		additionalQuery["language"] = req.QueryLanguage
 	}
 	return additionalQuery
 }
 
-func buildLanguageQuery(req provider.Request) map[string]string {
+func buildLanguageQuery(language string) map[string]string {
 	additionalQuery := make(map[string]string)
-	if req.Language != "" {
-		additionalQuery["language"] = req.Language
+	if language != "" {
+		additionalQuery["language"] = language
 	}
 	return additionalQuery
 }
