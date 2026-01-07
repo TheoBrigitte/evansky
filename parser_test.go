@@ -106,6 +106,9 @@ var testData = []string{
 	"Hook.ou.la.revanche.du capit.crochet.1992.vff.BDrip.720p..x264.aac.mkv",
 	"L Ile.au.tresor.VF.1950.Disney.webdl.1080p.x264.ac3.avi",
 	"Asterix.et.Obelix.Le.Combat.des.Chefs.S01E01.FRENCH.HDR.DV.1080p.WEB.H265-FW.mkv",
+	"Bernard et Bianca Au pays des kangouroux.1990.FRENCH.720p.BluRay.x264-ULSHD",
+	"The Wire iNTEGRALE MULTi VOSTFR+FRENCH 720p BluRay x265 HEVC-QC",
+	"The.Wire.S01E02.MULTi.VOSTFR+FRENCH.720p.WEB-DL.x265.HEVC-QC.mkv",
 }
 
 func TestParser(t *testing.T) {
