@@ -69,8 +69,13 @@ func Parse(filename string) (*TorrentInfo, error) {
 	// tor holds the resulting parsed information
 	tor := &TorrentInfo{}
 
-	startIndex, endIndex := 0, len(filename)
 	cleanName := strings.Replace(filename, "_", " ", -1)
+	// titleStartIndex and titleEndIndex hold the indexes for the title extraction
+	titleStartIndex, titleEndIndex := 0, len(filename)
+	if debug {
+		fmt.Printf("filename %q\n", filename)
+	}
+
 	for _, pattern := range patterns {
 		matches := pattern.re.FindAllStringSubmatch(cleanName, -1)
 		if len(matches) == 0 {
@@ -82,18 +87,26 @@ func Parse(filename string) (*TorrentInfo, error) {
 			matchIdx = len(matches) - 1
 		}
 
-		index := strings.Index(cleanName, matches[matchIdx][1])
-		if index == 0 {
-			startIndex = len(matches[matchIdx][1])
-			// fmt.Printf("    startIndex moved to %d [%q]\n", startIndex, filename[startIndex:endIndex])
-		} else if index < endIndex {
-			endIndex = index
-			// fmt.Printf("    endIndex moved to %d [%q]\n", endIndex, filename[startIndex:endIndex])
-		}
 
 		// If the value already exists, it is no longer updated. see golden_file_083.json
 		if pattern.name == "episode" && tor.Episode != 0 {
 			continue
+		}
+
+		// Update title index
+		index := strings.Index(cleanName, matches[1])
+		if index == 0 {
+			// Move title start index after this match
+			titleStartIndex = len(matches[1])
+			if debug {
+				fmt.Printf("    startIndex moved to %d [%q]\n", titleStartIndex, filename[titleStartIndex:titleEndIndex])
+			}
+		} else if index < titleEndIndex {
+			// Move title end index before this match
+			titleEndIndex = index
+			if debug {
+				fmt.Printf("    endIndex moved to %d [%q]\n", titleEndIndex, filename[titleStartIndex:titleEndIndex])
+			}
 		}
 
 		setField(tor, pattern.name, matches[matchIdx][1], matches[matchIdx][2])
@@ -101,12 +114,12 @@ func Parse(filename string) (*TorrentInfo, error) {
 
 	// Start process for title
 	// fmt.Println("  title: <internal>")
-	if startIndex > endIndex {
-		startIndex = 0
+	if titleStartIndex > titleEndIndex {
+		titleStartIndex = 0
 	}
 
 	// Take the first filename part before a '(' as title
-	parts := strings.Split(filename[startIndex:endIndex], "(")
+	parts := strings.Split(filename[titleStartIndex:titleEndIndex], "(")
 	if len(parts) < 1 {
 		return tor, nil
 	}
