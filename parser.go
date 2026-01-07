@@ -111,6 +111,10 @@ func Parse(filename string) (*TorrentInfo, error) {
 			continue
 		}
 
+		// Skip matches overlap, which occurs when the current match contains part of an already matched pattern
+		if containsPartOf(matches[2], patternMatches) {
+			continue
+		}
 
 		// Update title index
 		index := strings.Index(cleanName, matches[1])
@@ -171,4 +175,30 @@ func CleanTitle(raw string) string {
 	// cleanName = re.sub('([\[\(_]|- )$', '', cleanName).strip()
 
 	return strings.TrimSpace(cleanName)
+}
+
+// containsPartOf returns true if s contains part of any of the values in patternMatches
+// A part of a value is contained when its first or last 3 characters are found in s.
+// Patterns for year, season, and episode are ignored, this is because they are highly likely to return a false positive.
+func containsPartOf(s string, patternMatches map[string]string) bool {
+	for name, value := range patternMatches {
+		switch name {
+		case "year", "season", "episode":
+			continue
+		}
+
+		if len(value) > 3 {
+			if strings.Contains(s, value[:3]) {
+				return true
+			}
+			if strings.Contains(s, value[len(value)-4:]) {
+				return true
+			}
+		}
+		if strings.Contains(s, value) {
+			return true
+		}
+	}
+
+	return false
 }
