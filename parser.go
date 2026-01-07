@@ -41,7 +41,7 @@ var (
 	titleCaser   = cases.Title(language.English, cases.NoLower)
 	titlePattern = regexp.MustCompile(`^(.+?) ?[^\w.]?$`)
 
-	debug = true
+	debug = false
 )
 
 func setField(tor *TorrentInfo, field, raw, val string) {
