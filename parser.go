@@ -77,16 +77,29 @@ func Parse(filename string) (*TorrentInfo, error) {
 	}
 
 	for _, pattern := range patterns {
-		matches := pattern.re.FindAllStringSubmatch(cleanName, -1)
-		if len(matches) == 0 {
-			continue
-		}
-		matchIdx := 0
-		if pattern.last {
-			// Take last occurence of element.
-			matchIdx = len(matches) - 1
+
+		// Match all occurences of the pattern against the cleanName
+		groups := pattern.re.FindAllStringSubmatch(cleanName, -1)
+		if debug {
+			fmt.Printf("  %s: pattern:%q match:%#v\n", pattern.name, pattern.re, groups)
 		}
 
+		if len(groups) <= 0 {
+			// No match for this pattern
+			continue
+		}
+
+		// Select match group
+		matches := groups[0]
+		if pattern.last {
+			// Take last match group.
+			matches = groups[len(groups)-1]
+		}
+
+		if len(matches) <= 2 {
+			// No matches in this group
+			continue
+		}
 
 		// If the value already exists, it is no longer updated. see golden_file_083.json
 		if pattern.name == "episode" && tor.Episode != 0 {
@@ -109,7 +122,7 @@ func Parse(filename string) (*TorrentInfo, error) {
 			}
 		}
 
-		setField(tor, pattern.name, matches[matchIdx][1], matches[matchIdx][2])
+		setField(tor, pattern.name, matches[1], matches[2])
 	}
 
 	// Start process for title
