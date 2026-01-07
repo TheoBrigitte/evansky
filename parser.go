@@ -1,6 +1,7 @@
 package parsetorrentname
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -35,14 +36,20 @@ type TorrentInfo struct {
 	ThreeD     bool   `json:"3d,omitempty"`
 }
 
-var titleCaser = cases.Title(language.English, cases.NoLower)
+var (
+	titleCaser   = cases.Title(language.English, cases.NoLower)
+
+	debug = true
+)
 
 func setField(tor *TorrentInfo, field, raw, val string) {
 	ttor := reflect.TypeOf(tor)
 	torV := reflect.ValueOf(tor)
 	field = titleCaser.String(field)
 	v, _ := ttor.Elem().FieldByName(field)
-	// fmt.Printf("    field=%v, type=%+v, value=%v\n", field, v.Type, val)
+	if debug {
+		fmt.Printf("    field=%v, type=%+v, value=%v\n", field, v.Type, val)
+	}
 	switch v.Type.Kind() {
 	case reflect.Bool:
 		torV.Elem().FieldByName(field).SetBool(true)
@@ -59,8 +66,8 @@ func setField(tor *TorrentInfo, field, raw, val string) {
 
 // Parse breaks up the given filename in TorrentInfo
 func Parse(filename string) (*TorrentInfo, error) {
+	// tor holds the resulting parsed information
 	tor := &TorrentInfo{}
-	// fmt.Printf("filename %q\n", filename)
 
 	startIndex, endIndex := 0, len(filename)
 	cleanName := strings.Replace(filename, "_", " ", -1)
@@ -74,7 +81,6 @@ func Parse(filename string) (*TorrentInfo, error) {
 			// Take last occurence of element.
 			matchIdx = len(matches) - 1
 		}
-		// fmt.Printf("  %s: pattern:%q match:%#v\n", pattern.name, pattern.re, matches[matchIdx])
 
 		index := strings.Index(cleanName, matches[matchIdx][1])
 		if index == 0 {
