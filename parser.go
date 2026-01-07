@@ -76,7 +76,17 @@ func Parse(filename string) (*TorrentInfo, error) {
 		fmt.Printf("filename %q\n", filename)
 	}
 
+	// Process all patterns
+	patternMatches := make(map[string]string)
 	for _, pattern := range patterns {
+		// Skip if a similar pattern already matched
+		if _, ok := patternMatches[pattern.name]; ok {
+			continue
+		}
+		//// If the value already exists, it is no longer updated. see golden_file_083.json
+		//if pattern.name == "episode" && tor.Episode != 0 {
+		//	continue
+		//}
 
 		// Match all occurences of the pattern against the cleanName
 		groups := pattern.re.FindAllStringSubmatch(cleanName, -1)
@@ -101,10 +111,6 @@ func Parse(filename string) (*TorrentInfo, error) {
 			continue
 		}
 
-		// If the value already exists, it is no longer updated. see golden_file_083.json
-		if pattern.name == "episode" && tor.Episode != 0 {
-			continue
-		}
 
 		// Update title index
 		index := strings.Index(cleanName, matches[1])
@@ -123,6 +129,9 @@ func Parse(filename string) (*TorrentInfo, error) {
 		}
 
 		setField(tor, pattern.name, matches[1], matches[2])
+
+		// Set pattern as already matched
+		patternMatches[pattern.name] = matches[2]
 	}
 
 	// Start process for title
