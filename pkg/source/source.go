@@ -19,6 +19,14 @@ type Source interface {
 	Scan(string, []provider.Interface, Options) []Node
 }
 
+type NodeType int
+
+const (
+	NodeTypeUnknown NodeType = iota
+	NodeTypeMedia
+	NodeTypeSubtitle
+)
+
 // Node represents a single file or directory rename operation.
 // It contains the original path, the file info and
 // metadata retrieved from providers.
@@ -29,6 +37,8 @@ type Node struct {
 	Error error
 	// Info contains the parsed information about the file.
 	Info parser.Info
+	// Type indicates the type of node (media, subtitle, etc.).
+	Type NodeType
 	// Path is the original file or directory path.
 	Path string
 	// Responses holds metadata responses from provider.

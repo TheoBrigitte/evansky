@@ -5,6 +5,8 @@ import (
 	"strconv"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
+	"github.com/TheoBrigitte/evansky/pkg/source"
+	"github.com/TheoBrigitte/evansky/pkg/source/language"
 )
 
 type JellyfinFormatter struct{}
@@ -13,19 +15,23 @@ func NewJellyfinFormatter() JellyfinFormatter {
 	return JellyfinFormatter{}
 }
 
+// Movie format according to Jellyfin's recommended naming conventions.
 // https://jellyfin.org/docs/general/server/media/movies
-func (f JellyfinFormatter) Movie(m provider.ResponseMovie) []string {
+func (f JellyfinFormatter) Movie(m provider.ResponseMovie, n source.Node) []string {
 	movieFormat := fmt.Sprintf("%s (%d)", m.GetName(), m.GetDate().Year())
+	movieFormat = f.setSubtitleLanguage(movieFormat, n)
 	return []string{movieFormat, movieFormat}
 }
 
+// TVShow format according to Jellyfin's recommended naming conventions.
 // https://jellyfin.org/docs/general/server/media/shows
-func (f JellyfinFormatter) TVShow(tv provider.ResponseTV) []string {
+func (f JellyfinFormatter) TVShow(tv provider.ResponseTV, n source.Node) []string {
 	return []string{fmt.Sprintf("%s (%d)", tv.GetName(), tv.GetDate().Year())}
 }
 
-func (f JellyfinFormatter) TVSeason(s provider.ResponseTVSeason) []string {
-	showFormat := f.TVShow(s.GetShow())
+// TVSeason format according to Jellyfin's recommended naming conventions.
+func (f JellyfinFormatter) TVSeason(s provider.ResponseTVSeason, n source.Node) []string {
+	showFormat := f.TVShow(s.GetShow(), n)
 
 	seasonPadding := len(strconv.Itoa(len(s.GetShow().GetSeasons())))
 	seasonFormat := fmt.Sprintf("Season %0*d", seasonPadding, s.GetSeasonNumber())
@@ -33,8 +39,9 @@ func (f JellyfinFormatter) TVSeason(s provider.ResponseTVSeason) []string {
 	return append(showFormat, seasonFormat)
 }
 
-func (f JellyfinFormatter) TVEpisode(e provider.ResponseTVEpisode) []string {
-	seasonFormat := f.TVSeason(e.GetSeason())
+// TVEpisode format according to Jellyfin's recommended naming conventions.
+func (f JellyfinFormatter) TVEpisode(e provider.ResponseTVEpisode, n source.Node) []string {
+	seasonFormat := f.TVSeason(e.GetSeason(), n)
 
 	season := e.GetSeason()
 	show := season.GetShow()
@@ -45,6 +52,18 @@ func (f JellyfinFormatter) TVEpisode(e provider.ResponseTVEpisode) []string {
 	episodePadding := len(strconv.Itoa(len(season.GetEpisodes())))
 
 	episodeFormat := fmt.Sprintf("%s - S%0*dE%0*d - %s", show.GetName(), seasonPadding, season.GetSeasonNumber(), episodePadding, e.GetEpisodeNumber(), e.GetName())
+	episodeFormat = f.setSubtitleLanguage(episodeFormat, n)
 
 	return append(seasonFormat, episodeFormat)
+}
+
+func (f JellyfinFormatter) setSubtitleLanguage(name string, n source.Node) string {
+	if n.Type == source.NodeTypeSubtitle {
+		normalizedLang := language.NormalizeLanguage(n.Info.Language)
+		if normalizedLang != "" {
+			return fmt.Sprintf("%s.%s", name, normalizedLang)
+		}
+	}
+
+	return name
 }

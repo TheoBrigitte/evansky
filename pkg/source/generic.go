@@ -97,6 +97,15 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 		Path:  path,
 	}
 
+	// Set node type based on file extension.
+	extension := strings.TrimPrefix(strings.ToLower(filepath.Ext(entry.Name())), ".")
+	switch {
+	case slices.Contains(g.options.MediaExts, extension):
+		n.Type = NodeTypeMedia
+	case slices.Contains(g.options.SubtitleExts, extension):
+		n.Type = NodeTypeSubtitle
+	}
+
 	if slices.Contains(g.excludes, path) {
 		n.Error = fmt.Errorf("%w by glob: %s", ErrExcludedPath, path)
 		return []Node{n}
@@ -110,12 +119,6 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 	if g.includeRegex != nil && !g.includeRegex.MatchString(path) {
 		n.Error = fmt.Errorf("%w not included by regex: %s", ErrExcludedPath, path)
 		return []Node{n}
-	}
-
-	extension := strings.TrimPrefix(strings.ToLower(filepath.Ext(entry.Name())), ".")
-	switch {
-	case slices.Contains(g.options.MediaExts, extension):
-	case slices.Contains(g.options.SubtitleExts, extension):
 	}
 
 	log.Info().Msgf("scanning %s", path)

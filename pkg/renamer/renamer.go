@@ -243,13 +243,13 @@ func (r *renamer) generateEntry(node source.Node, output string) (e Entry, dir s
 	var components []string
 	switch resp := node.Response.(type) {
 	case provider.ResponseMovie:
-		components = r.o.Formatter.Movie(resp)
+		components = r.o.Formatter.Movie(resp, node)
 	case provider.ResponseTV:
-		components = r.o.Formatter.TVShow(resp)
+		components = r.o.Formatter.TVShow(resp, node)
 	case provider.ResponseTVSeason:
-		components = r.o.Formatter.TVSeason(resp)
+		components = r.o.Formatter.TVSeason(resp, node)
 	case provider.ResponseTVEpisode:
-		components = r.o.Formatter.TVEpisode(resp)
+		components = r.o.Formatter.TVEpisode(resp, node)
 	default:
 		e.Error = fmt.Errorf("unknown type: %T", node.Response)
 		return
