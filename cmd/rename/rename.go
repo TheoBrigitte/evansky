@@ -42,6 +42,7 @@ func init() {
 	Cmd.PersistentFlags().IntVar(&flags.stripComponents, "strip-components", 0, "number of leading path components to strip from source paths")
 	Cmd.PersistentFlags().StringVar(&flags.titleRegex, "title-regex", "", "regular expression to extract title from file or directory name")
 	Cmd.PersistentFlags().StringSliceVar(&flags.subtitleExtensions, "subtitle-ext", []string{"srt", "idx", "sub"}, "subtitles extensions to consider")
+	Cmd.PersistentFlags().BoolVar(&flags.skipExisting, "skip-existing", false, "skip renaming if destination dir already exists")
 	Cmd.PersistentFlags().BoolVar(&flags.write, "write", false, "actually perform the rename operation (default: false)")
 
 	register.Initialize(Cmd)
@@ -67,10 +68,11 @@ func runner(cmd *cobra.Command, args []string) error {
 	}
 
 	renameOptions := renamer.Options{
-		Force:      flags.force,
-		Formatter:  formatter,
-		Output:     flags.output,
-		RenameMode: flags.renameMode,
+		Force:        flags.force,
+		Formatter:    formatter,
+		Output:       flags.output,
+		RenameMode:   flags.renameMode,
+		SkipExisting: flags.skipExisting,
 	}
 	if flags.write {
 		renameOptions.Write = true

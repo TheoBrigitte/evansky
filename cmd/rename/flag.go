@@ -14,6 +14,7 @@ type Flags struct {
 	stripComponents    int
 	subtitleExtensions []string
 	titleRegex         string
+	skipExisting       bool
 	write              bool
 }
 

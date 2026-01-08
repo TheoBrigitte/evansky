@@ -58,6 +58,8 @@ type Options struct {
 	Output string
 	// RenameMode determines how files are renamed ("symlink" or "copy")
 	RenameMode string
+	// SkipExisting skips renaming if the destination already exists
+	SkipExisting bool
 	// Write enables actual file operations; false enables dry-run mode
 	Write bool
 }
@@ -140,6 +142,17 @@ func (r *renamer) Run(o source.Options) (err error) {
 	for output, nodes := range nodes {
 		for _, n := range nodes {
 			entry, dir := r.generateEntry(n, output)
+			if r.o.SkipExisting {
+				_, err := os.Lstat(dir)
+				if err != nil {
+					if !errors.Is(err, os.ErrNotExist) {
+						return err
+					}
+				} else {
+					// directory exists, skip renaming
+					entry.Error = fmt.Errorf("%w: destination directory already exists %q", source.ErrExcludedPath, dir)
+				}
+			}
 			entries = append(entries, entry)
 			if dir != "" {
 				dirs = append(dirs, dir)
