@@ -32,6 +32,7 @@ type generic struct {
 	excludes     []string       // List of files or directories to exclude based on glob patterns
 	excludeRegex *regexp.Regexp // Compiled regex for excluding files or directories
 	includeRegex *regexp.Regexp // Compiled regex for include files or directories
+	titleRegex   *regexp.Regexp // Compiled regex for extracting title from file or directory name
 
 	providers []provider.Interface // List of metadata providers to query
 }
@@ -78,6 +79,13 @@ func (g *generic) scan() ([]Node, error) {
 		g.includeRegex, err = regexp.Compile(g.options.IncludeRegex)
 		if err != nil {
 			return nil, fmt.Errorf("failed to compile include regex: %w", err)
+		}
+	}
+
+	if g.options.TitleRegex != "" {
+		g.titleRegex, err = regexp.Compile(g.options.TitleRegex)
+		if err != nil {
+			return nil, fmt.Errorf("failed to compile title regex: %w", err)
 		}
 	}
 
@@ -129,6 +137,12 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 		// use user provided query override if set
 		query = g.options.Query
 	}
+	if g.titleRegex != nil {
+		match := g.titleRegex.Find([]byte(query))
+		if len(match) > 1 {
+			query = string(match)
+		}
+	}
 
 	// Parse current query to extract media information.
 	info, err := parser.Parse(query)
@@ -160,7 +174,7 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 	if info.Year == 0 && info.Season == 0 && info.Episode == 0 {
 		// Parsing did not yield useful information, use the full name as query.
 		// This fixes an issue where some names are not parsed correctly.
-		req.Query = filepath.Base(parser.CleanTitle(query))
+		req.Query = filepath.Base(parser.CleanTitle(req.Query))
 		req.Query = strings.TrimSuffix(req.Query, filepath.Ext(req.Query))
 	}
 

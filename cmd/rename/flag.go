@@ -13,6 +13,7 @@ type Flags struct {
 	renameMode         string
 	stripComponents    int
 	subtitleExtensions []string
+	titleRegex         string
 	write              bool
 }
 

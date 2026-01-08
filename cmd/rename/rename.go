@@ -40,6 +40,7 @@ func init() {
 	Cmd.PersistentFlags().StringVar(&flags.queryLanguage, "query-language", "", "language query override")
 	Cmd.PersistentFlags().StringVar(&flags.renameMode, "mode", "symlink", "rename mode: symlink, hardlink, copy, move")
 	Cmd.PersistentFlags().IntVar(&flags.stripComponents, "strip-components", 0, "number of leading path components to strip from source paths")
+	Cmd.PersistentFlags().StringVar(&flags.titleRegex, "title-regex", "", "regular expression to extract title from file or directory name")
 	Cmd.PersistentFlags().StringSliceVar(&flags.subtitleExtensions, "subtitle-ext", []string{"srt", "idx", "sub"}, "subtitles extensions to consider")
 	Cmd.PersistentFlags().BoolVar(&flags.write, "write", false, "actually perform the rename operation (default: false)")
 
@@ -90,6 +91,7 @@ func runner(cmd *cobra.Command, args []string) error {
 		MediaExts:       flags.mediaExtensions,
 		SubtitleExts:    flags.subtitleExtensions,
 		StripComponents: flags.stripComponents,
+		TitleRegex:      flags.titleRegex,
 	}
 
 	return r.Run(sourceOptions)

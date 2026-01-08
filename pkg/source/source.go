@@ -62,6 +62,7 @@ type Options struct {
 	// TODO: might be an options just for renaming and not sourcing
 	SkipDirectories bool // Whether to skip processing directories themselves
 	StripComponents int  // Number of leading path components to strip from source paths
+	TitleRegex      string
 }
 
 // Scan is a convenience function that creates a generic source scanner and
