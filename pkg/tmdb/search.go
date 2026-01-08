@@ -2,7 +2,6 @@ package tmdb
 
 import (
 	"errors"
-	"fmt"
 	"slices"
 	"strconv"
 
@@ -43,7 +42,7 @@ func (c *Client) searchMovie(req provider.Request) (*gotmdb.SearchMovies, error)
 		return nil, err
 	}
 	if len(movies.Results) <= 0 {
-		return nil, fmt.Errorf("%w: %w", provider.ErrNoResult, err)
+		return nil, provider.ErrNoResult
 	}
 
 	return movies, nil
@@ -80,7 +79,7 @@ func (c *Client) searchTV(req provider.Request) (*gotmdb.SearchTVShows, error) {
 		return nil, err
 	}
 	if len(tvshows.Results) <= 0 {
-		return nil, fmt.Errorf("%w: %w", provider.ErrNoResult, err)
+		return nil, provider.ErrNoResult
 	}
 
 	return tvshows, nil
