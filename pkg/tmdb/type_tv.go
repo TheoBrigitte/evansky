@@ -119,7 +119,7 @@ func tvshowByClosestYear(year int, tvshows []gotmdb.TVShowResult) gotmdb.TVShowR
 		return tvshows[0]
 	}
 
-	var bestScore float64 = 0
+	var bestScore float64 = -1
 	var closestMatch gotmdb.TVShowResult
 
 	for index, t := range tvshows {
@@ -131,7 +131,7 @@ func tvshowByClosestYear(year int, tvshows []gotmdb.TVShowResult) gotmdb.TVShowR
 		score := computeClosetYearScore(year, date.Year(), index)
 		log.Debug().Msgf("comparing tv shows %s tmdbid=%d date=%s score=%f", t.Name, t.ID, t.FirstAirDate, score)
 
-		if bestScore == 0 || score < float64(bestScore) {
+		if bestScore == -1 || score < float64(bestScore) {
 			bestScore = score
 			closestMatch = t
 		}

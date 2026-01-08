@@ -79,7 +79,7 @@ func movieByClosestYear(year int, movies []gotmdb.MovieResult) gotmdb.MovieResul
 		return movies[0]
 	}
 
-	var bestScore float64 = 0
+	var bestScore float64 = -1
 	var closestMatch gotmdb.MovieResult
 
 	for index, t := range movies {
@@ -91,7 +91,7 @@ func movieByClosestYear(year int, movies []gotmdb.MovieResult) gotmdb.MovieResul
 		score := computeClosetYearScore(year, date.Year(), index)
 		log.Debug().Msgf("comparing movie %s tmdbid=%d date=%s score=%f", t.Title, t.ID, t.ReleaseDate, score)
 
-		if bestScore == 0 || score < float64(bestScore) {
+		if bestScore == -1 || score < float64(bestScore) {
 			bestScore = score
 			closestMatch = t
 		}
@@ -101,7 +101,7 @@ func movieByClosestYear(year int, movies []gotmdb.MovieResult) gotmdb.MovieResul
 }
 
 func computeClosetYearScore(targetYear int, actualYear int, index int) float64 {
-	return math.Abs(float64(targetYear-actualYear)+1) * (math.Log(float64(index + 2)))
+	return (math.Abs(float64(targetYear-actualYear)) + 1) * (math.Exp(float64(index + 2)))
 }
 
 func (m *movieResponse) InLanguage(req provider.Request) (provider.Response, error) {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -386,10 +387,11 @@ func (g *generic) searchByYearOrPopularity(p provider.Interface, req provider.Re
 
 	if req.Year > 0 && movie.GetDate().Year() != tvshow.GetDate().Year() {
 		// If there is a year specified, and both movie and tv year are different, pick the one which match if any
-		if req.Year == movie.GetDate().Year() {
+		yearDiff := math.Abs(float64(movie.GetDate().Year() - tvshow.GetDate().Year()))
+		if yearDiff > 0 {
 			return movie, nil
 		}
-		if req.Year == tvshow.GetDate().Year() {
+		if yearDiff < 0 {
 			return tvshow, nil
 		}
 	}
