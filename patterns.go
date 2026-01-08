@@ -18,7 +18,7 @@ var patterns = []struct {
 	re *regexp.Regexp
 }{
 	// Season in S01E01 format (case insensitive)
-	{"season", false, reflect.Int, regexp.MustCompile(`(?i)(s([0-9]{1,}))e?`)},
+	{"season", false, reflect.Int, regexp.MustCompile(`(?i)(s([0-9]{1,}))e`)},
 	// Season in 1x01 format (case insensitive)
 	{"season", false, reflect.Int, regexp.MustCompile(`(?i)(([0-9]{1,}))x`)},
 	// Episode in 1x01 format (case insensitive)
