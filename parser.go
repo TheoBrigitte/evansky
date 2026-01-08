@@ -197,7 +197,7 @@ func CleanTitle(raw string) string {
 func containsPartOf(s string, patternMatches map[string]string) bool {
 	for name, value := range patternMatches {
 		switch name {
-		case "year", "season", "episode":
+		case "season", "episode":
 			continue
 		}
 

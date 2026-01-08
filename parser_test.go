@@ -109,6 +109,7 @@ var testData = []string{
 	"Bernard et Bianca Au pays des kangouroux.1990.FRENCH.720p.BluRay.x264-ULSHD",
 	"The Wire iNTEGRALE MULTi VOSTFR+FRENCH 720p BluRay x265 HEVC-QC",
 	"The.Wire.S01E02.MULTi.VOSTFR+FRENCH.720p.WEB-DL.x265.HEVC-QC.mkv",
+	"Mud - Sur les rives du Mississippi (2012) (Mud)",
 }
 
 func TestParser(t *testing.T) {
