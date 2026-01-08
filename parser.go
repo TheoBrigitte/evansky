@@ -23,6 +23,7 @@ type TorrentInfo struct {
 	Audio      string `json:"audio,omitempty"`
 	Group      string `json:"group,omitempty"`
 	Region     string `json:"region,omitempty"`
+	Integrale  bool   `json:"integrale,omitempty"`
 	Extended   bool   `json:"extended,omitempty"`
 	Hardcoded  bool   `json:"hardcoded,omitempty"`
 	Proper     bool   `json:"proper,omitempty"`

@@ -56,6 +56,7 @@ var patterns = []struct {
 	// Group like YIFY, RARBG, SPARKS, FoV, KILLERS
 	{"group", false, reflect.String, regexp.MustCompile(`(- ?(.+?))+(?:\.\w+)?$`)},
 
+	{"integrale", false, reflect.Bool, regexp.MustCompile(`(?i)\b((INTEGRALE?))\b`)},
 	{"extended", false, reflect.Bool, regexp.MustCompile(`(?i)\b(EXTENDED(:?.CUT)?)\b`)},
 	{"hardcoded", false, reflect.Bool, regexp.MustCompile(`(?i)\b((HC))\b`)},
 	{"proper", false, reflect.Bool, regexp.MustCompile(`(?i)\b((PROPER))\b`)},

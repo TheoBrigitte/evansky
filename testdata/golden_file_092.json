@@ -1,8 +1,9 @@
 {
-  "Title": "The Wire iNTEGRALE",
+  "Title": "The Wire",
   "language": "MULTi",
   "resolution": "720p",
   "quality": "BluRay",
+  "integrale": true,
   "codec": "x265",
   "group": "QC"
 }
