@@ -280,6 +280,7 @@ func (r *renamer) generateEntry(node source.Node, output string) (e Entry, dir s
 
 	// Prepend output directory if specified
 	newPath := filepath.Join(append([]string{output}, components...)...)
+	newPath = r.o.Formatter.FileSuffix(newPath, node)
 	newPathWithExt := filepath.Clean(fmt.Sprintf("%s%s", newPath, extension))
 	if node.Path == newPathWithExt {
 		e.Error = fmt.Errorf("source and destination are the same")

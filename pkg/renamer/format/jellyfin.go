@@ -19,7 +19,6 @@ func NewJellyfinFormatter() JellyfinFormatter {
 // https://jellyfin.org/docs/general/server/media/movies
 func (f JellyfinFormatter) Movie(m provider.ResponseMovie, n source.Node) []string {
 	movieFormat := fmt.Sprintf("%s (%d)", m.GetName(), m.GetDate().Year())
-	movieFormat = f.setSubtitleLanguage(movieFormat, n)
 	return []string{movieFormat, movieFormat}
 }
 
@@ -52,13 +51,12 @@ func (f JellyfinFormatter) TVEpisode(e provider.ResponseTVEpisode, n source.Node
 	episodePadding := len(strconv.Itoa(len(season.GetEpisodes())))
 
 	episodeFormat := fmt.Sprintf("%s - S%0*dE%0*d - %s", show.GetName(), seasonPadding, season.GetSeasonNumber(), episodePadding, e.GetEpisodeNumber(), e.GetName())
-	episodeFormat = f.setSubtitleLanguage(episodeFormat, n)
 
 	return append(seasonFormat, episodeFormat)
 }
 
-func (f JellyfinFormatter) setSubtitleLanguage(name string, n source.Node) string {
-	if n.Type == source.NodeTypeSubtitle {
+func (f JellyfinFormatter) FileSuffix(name string, n source.Node) string {
+	if !n.Entry.IsDir() && n.Type == source.NodeTypeSubtitle {
 		normalizedLang := language.NormalizeLanguage(n.Info.Language)
 		if normalizedLang != "" {
 			return fmt.Sprintf("%s.%s", name, normalizedLang)
