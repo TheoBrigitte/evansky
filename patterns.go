@@ -48,7 +48,9 @@ var patterns = []struct {
 	// Language like VO, VOSTFR, MULTI
 	{"language", false, reflect.String, regexp.MustCompile(`(?i)\b((VO|VOSTFR|VF|VFF|VF2|MULTI))\b`)},
 	// Language like rus.eng, ita.eng
-	{"language", false, reflect.String, regexp.MustCompile(`(?i)\b((en(?:glish)?|fr(?:ench)?|rus\.eng|ita\.eng))\b`)},
+	{"language", false, reflect.String, regexp.MustCompile(`(?i)\b((fr(?:ench)?|english|rus\.eng|ita\.eng))\b`)},
+	{"language", false, reflect.String, regexp.MustCompile(`\b((EN(?:GLISH)?))\b`)},
+	{"language", false, reflect.String, regexp.MustCompile(`\.((en(?:glish)?))\.`)},
 	{"sbs", false, reflect.String, regexp.MustCompile(`(?i)\b(((?:Half-)?SBS))\b`)},
 	// Container like mkv, avi, mp4
 	{"container", false, reflect.String, regexp.MustCompile(`(?i)\b((mkv|avi|mp4))\b`)},
