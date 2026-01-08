@@ -63,7 +63,7 @@ var patterns = []struct {
 	{"hardcoded", false, reflect.Bool, regexp.MustCompile(`(?i)\b((HC))\b`)},
 	{"proper", false, reflect.Bool, regexp.MustCompile(`(?i)\b((PROPER))\b`)},
 	{"repack", false, reflect.Bool, regexp.MustCompile(`(?i)\b((REPACK))\b`)},
-	{"widescreen", false, reflect.Bool, regexp.MustCompile(`(?i)\b((WS))\b`)},
+	{"widescreen", false, reflect.Bool, regexp.MustCompile(`(?i)\b((WS|IMAX))\b`)},
 	{"unrated", false, reflect.Bool, regexp.MustCompile(`(?i)\b((UNRATED))\b`)},
 	{"threeD", false, reflect.Bool, regexp.MustCompile(`(?i)\b((3D))\b`)},
 }
