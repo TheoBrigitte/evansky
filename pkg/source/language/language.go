@@ -85,14 +85,14 @@ func Detect(req provider.Request, entries []os.DirEntry) (string, float64, strin
 
 	if req.Response == nil {
 		// Use default language for initial search, to let the provider decide the best match.
-		return "en", -1, childLang
+		return "", -1, childLang
 	}
 
 	// Use previously detected language
 	// Having a previous request means we are already down in the tree.
 	prevReq := req.Response.GetRequest()
 	if prevReq == nil {
-		return "en", -1, childLang
+		return "", -1, childLang
 	}
 
 	return prevReq.QueryLanguage, -1, childLang
