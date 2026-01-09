@@ -2,7 +2,6 @@ package tmdb
 
 import (
 	"errors"
-	"slices"
 	"strconv"
 
 	gotmdb "github.com/cyruzin/golang-tmdb"
@@ -24,12 +23,6 @@ func (c *Client) SearchMovie(req provider.Request) (provider.ResponseMovie, erro
 			return nil, err
 		}
 	}
-
-	slices.SortStableFunc(movies.Results, func(e1, e2 gotmdb.MovieResult) int {
-		e1Score := computePopularity(e1.Popularity, e1.VoteAverage, e1.VoteCount)
-		e2Score := computePopularity(e2.Popularity, e2.VoteAverage, e2.VoteCount)
-		return e2Score - e1Score
-	})
 
 	return c.newMovieResponse(movieByClosestYear(req.Year, movies.Results), req.QueryLanguage)
 }
@@ -61,12 +54,6 @@ func (c *Client) SearchTV(req provider.Request) (provider.ResponseTV, error) {
 			return nil, err
 		}
 	}
-
-	slices.SortStableFunc(tvshows.Results, func(e1, e2 gotmdb.TVShowResult) int {
-		e1Score := computePopularity(e1.Popularity, e1.VoteAverage, e1.VoteCount)
-		e2Score := computePopularity(e2.Popularity, e2.VoteAverage, e2.VoteCount)
-		return e2Score - e1Score
-	})
 
 	return c.newTVResponse(tvshowByClosestYear(req.Year, tvshows.Results), req)
 }
