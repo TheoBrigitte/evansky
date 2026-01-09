@@ -165,7 +165,7 @@ func (r *renamer) Run(o source.Options) (err error) {
 	slices.Sort(dirs)
 	for _, dir := range slices.Compact(dirs) {
 		if r.o.Write {
-			err := os.MkdirAll(dir, 0o750)
+			err := os.MkdirAll(dir, 0o755)
 			if err != nil {
 				return fmt.Errorf("failed to create directory %q: %w", dir, err)
 			}
