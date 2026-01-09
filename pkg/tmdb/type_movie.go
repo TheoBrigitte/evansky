@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
+	"github.com/TheoBrigitte/evansky/pkg/source"
 )
 
 type movieResponse struct {
@@ -74,30 +75,54 @@ func (r movie) GetPopularity() int {
 	return computePopularity(r.result.Popularity, r.result.VoteAverage, r.result.VoteCount)
 }
 
-func movieByClosestYear(year int, movies []gotmdb.MovieResult) gotmdb.MovieResult {
-	if year == 0 {
-		return movies[0]
-	}
-
+func movieByClosestYear(query string, year int, movies []gotmdb.MovieResult) (gotmdb.MovieResult, float64) {
 	var bestScore float64 = -1
+	var bestTitleScore float64 = 0
 	var closestMatch gotmdb.MovieResult
 
 	for index, t := range movies {
-		date, err := time.Parse(time.DateOnly, t.ReleaseDate)
-		if err != nil {
-			log.Warn().Err(err).Msgf("failed to parse ReleaseDate: %s", t.ReleaseDate)
-			continue
-		}
-		score := computeClosetYearScore(year, date.Year(), index)
-		log.Debug().Msgf("comparing movie %s tmdbid=%d date=%s score=%f", t.Title, t.ID, t.ReleaseDate, score)
+		var yearScore float64
 
-		if bestScore == -1 || score < float64(bestScore) {
-			bestScore = score
+		// Only calculate year score if year is provided
+		if year > 0 {
+			date, err := time.Parse(time.DateOnly, t.ReleaseDate)
+			if err != nil {
+				log.Warn().Err(err).Msgf("failed to parse ReleaseDate: %s", t.ReleaseDate)
+				continue
+			}
+			yearScore = computeClosetYearScore(year, date.Year(), index)
+		} else {
+			// When no year is provided, use index as a small tiebreaker
+			yearScore = float64(index)
+		}
+
+		// Calculate title similarity (higher is better, 0-1 range)
+		_, titleScore := source.BetterMatch(query, t.Title, 0)
+
+		// Calculate popularity score (lower is better, inverted so higher popularity = lower score)
+		// Normalize popularity to 0-100 range and invert
+		popularity := computePopularity(t.Popularity, t.VoteAverage, t.VoteCount)
+		popularityScore := 100.0 - float64(popularity)
+
+		// Combined score: weighted sum where title is primary, year and popularity are secondary (lower is better)
+		// Title mismatch is weighted heavily (1000x) so better title matches almost always win
+		// Year score and popularity score matter for breaking ties
+		combinedScore := (1.0-titleScore)*1000.0 + yearScore + popularityScore
+
+		log.Debug().Msgf("comparing movie %s tmdbid=%d date=%s yearScore=%f titleScore=%f popularity=%d popularityScore=%f combinedScore=%f",
+			t.Title, t.ID, t.ReleaseDate, yearScore, titleScore, popularity, popularityScore, combinedScore)
+
+		if bestScore == -1 || combinedScore < bestScore {
+			bestScore = combinedScore
+			bestTitleScore = titleScore
 			closestMatch = t
 		}
 	}
 
-	return closestMatch
+	log.Debug().Msgf("best match: %s tmdbid=%d bestScore=%f bestTitleScore=%f",
+		closestMatch.Title, closestMatch.ID, bestScore, bestTitleScore)
+
+	return closestMatch, bestScore
 }
 
 func computeClosetYearScore(targetYear int, actualYear int, index int) float64 {

@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
+	"github.com/TheoBrigitte/evansky/pkg/source"
 )
 
 type tvResponse struct {
@@ -114,30 +115,54 @@ func (r tv) GetSeason(seasonNumber int) (provider.ResponseTVSeason, error) {
 	return nil, fmt.Errorf("season %d not found for show %d", seasonNumber, r.GetID())
 }
 
-func tvshowByClosestYear(year int, tvshows []gotmdb.TVShowResult) gotmdb.TVShowResult {
-	if year == 0 {
-		return tvshows[0]
-	}
-
+func tvshowByClosestYear(query string, year int, tvshows []gotmdb.TVShowResult) (gotmdb.TVShowResult, float64) {
 	var bestScore float64 = -1
+	var bestTitleScore float64 = 0
 	var closestMatch gotmdb.TVShowResult
 
 	for index, t := range tvshows {
-		date, err := time.Parse(time.DateOnly, t.FirstAirDate)
-		if err != nil {
-			log.Warn().Err(err).Msgf("failed to parse FirstAirDate: %s", t.FirstAirDate)
-			continue
-		}
-		score := computeClosetYearScore(year, date.Year(), index)
-		log.Debug().Msgf("comparing tv shows %s tmdbid=%d date=%s score=%f", t.Name, t.ID, t.FirstAirDate, score)
+		var yearScore float64
 
-		if bestScore == -1 || score < float64(bestScore) {
-			bestScore = score
+		// Only calculate year score if year is provided
+		if year > 0 {
+			date, err := time.Parse(time.DateOnly, t.FirstAirDate)
+			if err != nil {
+				log.Warn().Err(err).Msgf("failed to parse FirstAirDate: %s", t.FirstAirDate)
+				continue
+			}
+			yearScore = computeClosetYearScore(year, date.Year(), index)
+		} else {
+			// When no year is provided, use index as a small tiebreaker
+			yearScore = float64(index)
+		}
+
+		// Calculate title similarity (higher is better, 0-1 range)
+		_, titleScore := source.BetterMatch(query, t.Name, 0)
+
+		// Calculate popularity score (lower is better, inverted so higher popularity = lower score)
+		// Normalize popularity to 0-100 range and invert
+		popularity := computePopularity(t.Popularity, t.VoteAverage, t.VoteCount)
+		popularityScore := 100.0 - float64(popularity)
+
+		// Combined score: weighted sum where title is primary, year and popularity are secondary (lower is better)
+		// Title mismatch is weighted heavily (1000x) so better title matches almost always win
+		// Year score and popularity score matter for breaking ties
+		combinedScore := (1.0-titleScore)*1000.0 + yearScore + popularityScore
+
+		log.Debug().Msgf("comparing tv show %s tmdbid=%d date=%s yearScore=%f titleScore=%f popularity=%d popularityScore=%f combinedScore=%f",
+			t.Name, t.ID, t.FirstAirDate, yearScore, titleScore, popularity, popularityScore, combinedScore)
+
+		if bestScore == -1 || combinedScore < bestScore {
+			bestScore = combinedScore
+			bestTitleScore = titleScore
 			closestMatch = t
 		}
 	}
 
-	return closestMatch
+	log.Debug().Msgf("best match: %s tmdbid=%d bestScore=%f bestTitleScore=%f",
+		closestMatch.Name, closestMatch.ID, bestScore, bestTitleScore)
+
+	return closestMatch, bestScore
 }
 
 func (m *tvResponse) InLanguage(req provider.Request) (provider.Response, error) {

@@ -7,8 +7,8 @@ import (
 // Interface is the interface that all providers must implement.
 type Interface interface {
 	Name() string
-	SearchMovie(Request) (ResponseMovie, error)
-	SearchTV(Request) (ResponseTV, error)
+	SearchMovie(Request) (ResponseMovie, float64, error)
+	SearchTV(Request) (ResponseTV, float64, error)
 }
 
 // NewFunc is a function that creates a new provider instance.

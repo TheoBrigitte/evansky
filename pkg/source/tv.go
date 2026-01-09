@@ -94,14 +94,14 @@ func (g *generic) findTVSeasonOrEpisode(p provider.Interface, seasons []provider
 	var bestScore float64 = -1
 	// seasons := make([]gotmdb.TVSeason, 0, len(show.Seasons))
 	for _, season := range seasons {
-		isBetter, seasonScore := betterMatch(req.Entry.Name(), season.GetName(), bestScore)
+		isBetter, seasonScore := BetterMatch(req.Entry.Name(), season.GetName(), bestScore)
 		if isBetter {
 			bestScore = seasonScore
 			bestMatch = season
 		}
 
 		for _, episode := range season.GetEpisodes() {
-			isBetter, episodeScore := betterMatch(req.Entry.Name(), episode.GetName(), bestScore)
+			isBetter, episodeScore := BetterMatch(req.Entry.Name(), episode.GetName(), bestScore)
 			if isBetter {
 				bestScore = episodeScore
 				bestMatch = episode
@@ -142,7 +142,7 @@ func (g *generic) findTVEpisode(p provider.Interface, seasons []provider.Respons
 	var bestScore float64 = -1
 	for _, season := range seasons {
 		for _, episode := range season.GetEpisodes() {
-			isBetter, episodeScore := betterMatch(name, episode.GetName(), bestScore)
+			isBetter, episodeScore := BetterMatch(name, episode.GetName(), bestScore)
 			if isBetter {
 				bestScore = episodeScore
 				bestMatch = episode

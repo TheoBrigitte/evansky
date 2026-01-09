@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"math"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -299,7 +298,7 @@ func (g *generic) find(p provider.Interface, req provider.Request) (provider.Res
 
 		if req.Info.Season > 0 || req.Info.Episode > 0 {
 			// Search for TV show season or episode.
-			tv, err := p.SearchTV(req)
+			tv, _, err := p.SearchTV(req)
 			if err != nil {
 				return nil, err
 			}
@@ -354,17 +353,18 @@ func (g *generic) find(p provider.Interface, req provider.Request) (provider.Res
 	return nil, fmt.Errorf("find: unsupported response media type: %T", req.Response)
 }
 
-// searchByYearOrPopularity searches for both movie and TV show and returns the most popular one.
+// searchByYearOrPopularity searches for both movie and TV show and returns the best match.
 // This method is used when we have ambiguous media that could be either a movie or TV show.
-// It queries both endpoints and compares popularity scores to determine the best match.
+// It queries both endpoints and compares using a combined score that considers both
+// title similarity, year proximity, and popularity to determine the best match.
 func (g *generic) searchByYearOrPopularity(p provider.Interface, req provider.Request) (provider.Response, error) {
-	movie, err := p.SearchMovie(req)
+	movie, movieScore, err := p.SearchMovie(req)
 	if err != nil && !errors.Is(err, provider.ErrNoResult) {
 		// Ignore no result error, as we want to try TV show search as well.
 		return nil, err
 	}
 
-	tvshow, err := p.SearchTV(req)
+	tvshow, tvScore, err := p.SearchTV(req)
 	if err != nil && !errors.Is(err, provider.ErrNoResult) {
 		// Ignore no result error, as we want to try movie search as well.
 		return nil, err
@@ -385,26 +385,27 @@ func (g *generic) searchByYearOrPopularity(p provider.Interface, req provider.Re
 		return movie, nil
 	}
 
-	if req.Year > 0 && movie.GetDate().Year() != tvshow.GetDate().Year() {
-		// If there is a year specified, and both movie and tv year are different, pick the one which match if any
-		yearDiff := math.Abs(float64(movie.GetDate().Year() - tvshow.GetDate().Year()))
-		if yearDiff > 0 {
-			return movie, nil
-		}
-		if yearDiff < 0 {
-			return tvshow, nil
-		}
-	}
+	// Both movie and TV show found, use their scores to decide which is better.
+	// Scores are calculated by the search functions and include title similarity,
+	// year proximity, and popularity.
 
-	moviePopularity := movie.GetPopularity()
-	tvshowPopularity := tvshow.GetPopularity()
-	log.Debug().Int("movie_popularity", moviePopularity).Int("tvshow_popularity", tvshowPopularity).Msg("comparing movie and tv show popularity")
-	if moviePopularity >= tvshowPopularity {
-		// Movie is more popular than TV show.
+	log.Debug().
+		Str("movie_name", movie.GetName()).
+		Int("movie_year", movie.GetDate().Year()).
+		Int("movie_popularity", movie.GetPopularity()).
+		Float64("movie_score", movieScore).
+		Str("tv_name", tvshow.GetName()).
+		Int("tv_year", tvshow.GetDate().Year()).
+		Int("tv_popularity", tvshow.GetPopularity()).
+		Float64("tv_score", tvScore).
+		Msg("comparing movie and tv show by combined score")
+
+	if movieScore <= tvScore {
+		// Movie has better (lower) combined score.
 		return movie, nil
 	}
 
-	// TV show is more popular than movie.
+	// TV show has better (lower) combined score.
 	return tvshow, nil
 }
 

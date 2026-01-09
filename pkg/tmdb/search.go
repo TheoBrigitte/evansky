@@ -12,7 +12,7 @@ import (
 
 // SearchMovie search for movies using query and year (if provided).
 // see: https://developer.themoviedb.org/reference/search-movie
-func (c *Client) SearchMovie(req provider.Request) (provider.ResponseMovie, error) {
+func (c *Client) SearchMovie(req provider.Request) (provider.ResponseMovie, float64, error) {
 	movies, err := c.searchMovie(req)
 	if err != nil && errors.Is(err, provider.ErrNoResult) {
 		// Try again without year and language filters
@@ -20,11 +20,13 @@ func (c *Client) SearchMovie(req provider.Request) (provider.ResponseMovie, erro
 		req.QueryLanguage = ""
 		movies, err = c.searchMovie(req)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 	}
 
-	return c.newMovieResponse(movieByClosestYear(req.Year, movies.Results), req.QueryLanguage)
+	result, score := movieByClosestYear(req.Query, req.Year, movies.Results)
+	resp, err := c.newMovieResponse(result, req.QueryLanguage)
+	return resp, score, err
 }
 
 func (c *Client) searchMovie(req provider.Request) (*gotmdb.SearchMovies, error) {
@@ -43,7 +45,7 @@ func (c *Client) searchMovie(req provider.Request) (*gotmdb.SearchMovies, error)
 
 // SearchTV search for tv shows using query and year (if provided).
 // see: https://developer.themoviedb.org/reference/search-tv
-func (c *Client) SearchTV(req provider.Request) (provider.ResponseTV, error) {
+func (c *Client) SearchTV(req provider.Request) (provider.ResponseTV, float64, error) {
 	tvshows, err := c.searchTV(req)
 	if err != nil && errors.Is(err, provider.ErrNoResult) {
 		// Try again without year and language filters
@@ -51,11 +53,13 @@ func (c *Client) SearchTV(req provider.Request) (provider.ResponseTV, error) {
 		req.QueryLanguage = ""
 		tvshows, err = c.searchTV(req)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 	}
 
-	return c.newTVResponse(tvshowByClosestYear(req.Year, tvshows.Results), req)
+	result, score := tvshowByClosestYear(req.Query, req.Year, tvshows.Results)
+	resp, err := c.newTVResponse(result, req)
+	return resp, score, err
 }
 
 func (c *Client) searchTV(req provider.Request) (*gotmdb.SearchTVShows, error) {
