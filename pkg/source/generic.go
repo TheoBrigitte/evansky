@@ -138,9 +138,9 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 		query = g.options.Query
 	}
 	if g.titleRegex != nil {
-		match := g.titleRegex.Find([]byte(query))
-		if len(match) > 1 {
-			query = string(match)
+		matches := g.titleRegex.FindStringSubmatch(query)
+		if len(matches) > 1 {
+			query = matches[len(matches)-1]
 		}
 	}
 
