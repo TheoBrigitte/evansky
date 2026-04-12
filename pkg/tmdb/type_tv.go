@@ -53,7 +53,7 @@ func (m *tvResponse) init(result gotmdb.TVShowResult, req provider.Request) erro
 		if err != nil {
 			return err
 		}
-		m.tv.firstAirDate = firstAirDate
+		m.firstAirDate = firstAirDate
 	}
 
 	languageQuery := buildLanguageQuery(req.DestinationLanguage)
@@ -75,7 +75,7 @@ func (m *tvResponse) init(result gotmdb.TVShowResult, req provider.Request) erro
 		}
 		seasons = append(seasons, r)
 	}
-	m.tv.seasons = seasons
+	m.seasons = seasons
 	log.Debug().Msgf("TV show %d seasons loaded: %d", m.GetID(), len(m.seasons))
 	m.multi[req.DestinationLanguage] = m.tv
 
