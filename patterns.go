@@ -18,13 +18,13 @@ var patterns = []struct {
 	re *regexp.Regexp
 }{
 	// Season in S01E01 format (case insensitive)
-	{"season", false, reflect.Int, regexp.MustCompile(`(?i)(s([0-9]{1,}))e`)},
+	{"season", false, reflect.Int, regexp.MustCompile(`(?i)(s(?:aison ?|eason ?)?([0-9]{1,}))(?:e| ?episode)`)},
 	// Season in 1x01 format (case insensitive)
 	{"season", false, reflect.Int, regexp.MustCompile(`(?i)(([0-9]{1,}))x`)},
 	// Episode in 1x01 format (case insensitive)
-	{"episode", false, reflect.Int, regexp.MustCompile(`(?i)([x]([0-9]{2})(?:[^\w]|$))`)},
+	{"episode", false, reflect.Int, regexp.MustCompile(`(?i)([0-9]{1,}x([0-9]{2})(?:[^\w]|$))`)},
 	// Episode in S01E01 format (case insensitive)
-	{"episode", false, reflect.Int, regexp.MustCompile(`(?i)([e]([0-9]{2,})(?:[^\w]|$))`)},
+	{"episode", false, reflect.Int, regexp.MustCompile(`(?i)(s(?:aison ?|eason ?)?[0-9]{1,}(?:e| ?episode)([0-9]{2,})(?:[^\w]|$))`)},
 	// Episode in - 01 format (case insensitive)
 	{"episode", false, reflect.Int, regexp.MustCompile(`(-\s+([0-9]{2,})(?:[^\w]|$))`)},
 	// Year ranges and take the first year, e.g. 1989-2016 => 1989

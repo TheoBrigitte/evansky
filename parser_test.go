@@ -110,6 +110,7 @@ var testData = []string{
 	"The Wire iNTEGRALE MULTi VOSTFR+FRENCH 720p BluRay x265 HEVC-QC",
 	"The.Wire.S01E02.MULTi.VOSTFR+FRENCH.720p.WEB-DL.x265.HEVC-QC.mkv",
 	"Mud - Sur les rives du Mississippi (2012) (Mud)",
+	"Drive.2011.MULTi.(VFF+VFQ).1080p.BluRay.HDLight.AC3.x264-Zone80.mkv",
 }
 
 func TestParser(t *testing.T) {
