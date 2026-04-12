@@ -102,21 +102,21 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 	}
 
 	if slices.Contains(g.excludes, path) {
-		n.Error = fmt.Errorf("%w by glob: %s", ErrExcludedPath, path)
+		n.Error = fmt.Errorf("%w by glob", ErrExcludedPath)
 		return []Node{n}
 	}
 
 	if g.excludeRegex != nil && g.excludeRegex.MatchString(path) {
-		n.Error = fmt.Errorf("%w by regex: %s", ErrExcludedPath, path)
+		n.Error = fmt.Errorf("%w by regex", ErrExcludedPath)
 		return []Node{n}
 	}
 
 	if g.includeRegex != nil && !g.includeRegex.MatchString(path) {
-		n.Error = fmt.Errorf("%w not included by regex: %s", ErrExcludedPath, path)
+		n.Error = fmt.Errorf("%w not included by regex", ErrExcludedPath)
 		return []Node{n}
 	}
 
-	log.Info().Msgf("scanning %s", path)
+	log.Debug().Str("path", path).Msgf("scanning")
 
 	// query default to file or directory name
 	query := entry.Name()
@@ -203,7 +203,7 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 			return []Node{n}
 		}
 
-		log.Info().Int("id", resp.GetID()).Str("name", resp.GetName()).Int("year", resp.GetDate().Year()).Str("type", fmt.Sprintf("%T", resp)).Msgf("found    %s", path)
+		log.Debug().Int("id", resp.GetID()).Str("name", resp.GetName()).Int("year", resp.GetDate().Year()).Str("type", fmt.Sprintf("%T", resp)).Msgf("found    %s", path)
 
 		n.Response = resp
 		// This is a directory, continue walking.

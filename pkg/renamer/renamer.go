@@ -116,7 +116,7 @@ func (r *renamer) Run(o source.Options) (err error) {
 		return fmt.Errorf("unknown rename mode: %s", r.o.RenameMode)
 	}
 
-	log.Info().Int("providers", len(r.providers)).Msgf("scanning %d path(s)", len(r.paths))
+	log.Debug().Int("paths", len(r.paths)).Int("providers", len(r.providers)).Msgf("scanning")
 
 	// Scan all paths and collect inforations for renaming
 	nodes := make(map[string][]source.Node)
@@ -170,11 +170,11 @@ func (r *renamer) Run(o source.Options) (err error) {
 				return fmt.Errorf("failed to create directory %q: %w", dir, err)
 			}
 		}
-		log.Info().Msgf("%s[new directory] -> [%s]", prefix, dir)
+		log.Info().Str("directory", dir).Msgf("%screated directory", prefix)
 		dirCount++
 	}
 	if dirCount > 0 {
-		log.Info().Msgf("%screated %d directories", prefix, dirCount)
+		log.Info().Int("total", dirCount).Msgf("%screated directories", prefix)
 	}
 
 	// Rename files
@@ -211,7 +211,7 @@ func (r *renamer) Run(o source.Options) (err error) {
 
 		uniqEntries[entries[index].Destination] = struct{}{}
 
-		log.Info().Msgf("%s[%s]\nrenamed to %s[%s]", prefix, entries[index].Source, prefix, entries[index].Destination)
+		log.Info().Str("source", entries[index].Source).Str("destination", entries[index].Destination).Msgf("%srenamed", prefix)
 		renamedCount++
 	}
 
@@ -223,9 +223,9 @@ func (r *renamer) Run(o source.Options) (err error) {
 		}
 
 		if errors.Is(e.Error, source.ErrExcludedPath) {
-			log.Warn().Err(e.Error).Msgf("%s[%s]", prefix, e.Source)
+			log.Info().Str("source", e.Source).Str("reason", e.Error.Error()).Msgf("%sexcluded", prefix)
 		} else {
-			log.Err(e.Error).Msgf("%s[%s]", prefix, e.Source)
+			log.Err(e.Error).Str("source", e.Source).Msgf("%srenaming failed", prefix)
 			errorsCount++
 		}
 	}

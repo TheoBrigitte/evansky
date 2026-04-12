@@ -52,7 +52,10 @@ func setLogLevel(cmd *cobra.Command, args []string) error {
 	zerolog.SetGlobalLevel(level)
 
 	// Set log to be printed on stderr with human-friendly format
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	log.Logger = log.Output(zerolog.ConsoleWriter{
+		Out:         os.Stderr,
+		FieldsOrder: []string{"level", "message", "destination", "source"},
+	})
 
 	return nil
 }
