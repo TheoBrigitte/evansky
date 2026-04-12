@@ -48,7 +48,13 @@ func (g *generic) scan() ([]Node, error) {
 	dirInfo := fs.FileInfoToDirEntry(info)
 
 	if g.options.ExcludeGlob != "" {
-		excludes, err := filepath.Glob(filepath.Join(g.path, g.options.ExcludeGlob))
+		// filepaht.Glob requires a full path to match, so we need to join the exclude glob with the base path.
+		excludePath := g.path
+		if !dirInfo.IsDir() {
+			// In case of a file, we need to use the parent directory as the base path for the glob pattern.
+			excludePath = filepath.Dir(g.path)
+		}
+		excludes, err := filepath.Glob(filepath.Join(excludePath, g.options.ExcludeGlob))
 		if err != nil {
 			return nil, fmt.Errorf("failed to apply exclude pattern: %w", err)
 		}
