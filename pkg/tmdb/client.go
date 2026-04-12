@@ -82,7 +82,10 @@ func newClient(o *clientOptions) http.Client {
 
 		// create http cache
 		// TODO: cleanup cache directory
-		c := filecache.NewCache(cachedFs, filecache.FileCacheConfig{MaxAge: o.ttl})
+		c := filecache.NewCache(cachedFs, filecache.FileCacheConfig{
+			MaxAge: o.ttl,
+			Dir:    o.cacheDir,
+		})
 
 		transport = &httpcache.Transport{
 			Cache:    c.AsHTTPCache(),
