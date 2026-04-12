@@ -76,34 +76,6 @@ func (c *Client) searchTV(req provider.Request) (*gotmdb.SearchTVShows, error) {
 	return tvshows, nil
 }
 
-// searchMulti search for multi media using query.
-// see: https://developer.themoviedb.org/reference/search-multi
-func (c *Client) searchMulti(query, year string) (provider.Response, error) {
-	multi, err := c.client.GetSearchMulti(query, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	responses := make([]provider.Response, 0, len(multi.Results))
-	//for _, result := range multi.Results {
-	//	r := multiResponse{
-	//		ID:    result.ID,
-	//		Title: result.Title,
-	//		Name:  result.Name,
-	//		//MediaType:        result.MediaType,
-	//		OriginalLanguage: result.OriginalLanguage,
-	//		OriginalName:     result.OriginalName,
-	//		OriginalTitle:    result.OriginalTitle,
-	//		ReleaseDate:      result.ReleaseDate,
-	//		FirstAirDate:     result.FirstAirDate,
-	//		Popularity:       result.Popularity,
-	//	}
-	//	responses = append(responses, r)
-	//}
-
-	return responses[0], nil
-}
-
 func buildAdditionalQuery(req provider.Request) map[string]string {
 	additionalQuery := make(map[string]string)
 	if req.Year != 0 {

@@ -37,18 +37,6 @@ type generic struct {
 	providers []provider.Interface // List of metadata providers to query
 }
 
-// newGeneric creates a new generic source instance with the specified path,
-// providers, and options. The generic source can handle both movies and TV shows
-// by querying metadata providers based on parsed file information.
-func newGeneric(path string, providers []provider.Interface, o Options) *generic {
-	s := &generic{
-		path:      path,
-		providers: providers,
-	}
-
-	return s
-}
-
 // scan scans the source path and returns a list of nodes.
 // It starts by getting information about the root path and then recursively
 // walks the directory tree to process each file and directory.
@@ -407,31 +395,4 @@ func (g *generic) searchByYearOrPopularity(p provider.Interface, req provider.Re
 
 	// TV show has better (lower) combined score.
 	return tvshow, nil
-}
-
-func (g *generic) findValidNode(nodes []Node) *Node {
-	for _, n := range nodes {
-		if n.Error == nil {
-			return &n
-		}
-	}
-
-	return nil
-}
-
-// usePreviousLanguage copies the language setting from a previous request to maintain
-// language consistency throughout the processing tree. This ensures that once a language
-// is detected at a higher level, it's propagated to child requests.
-func (g *generic) usePreviousLanguage(req provider.Request) provider.Request {
-	if req.Response == nil {
-		return req
-	}
-
-	prevReq := req.Response.GetRequest()
-	if prevReq == nil || prevReq.QueryLanguage == "" {
-		return req
-	}
-
-	req.QueryLanguage = prevReq.QueryLanguage
-	return req
 }
