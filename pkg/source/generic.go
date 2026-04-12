@@ -27,7 +27,6 @@ var (
 // and query metadata providers to generate nodes for renaming operations.
 type generic struct {
 	path         string         // Root path to scan for media files
-	newPath      string         // Proposed new path (currently unused)
 	options      Options        // Configuration options for scanning behavior
 	excludes     []string       // List of files or directories to exclude based on glob patterns
 	excludeRegex *regexp.Regexp // Compiled regex for excluding files or directories
