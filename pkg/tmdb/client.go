@@ -2,7 +2,7 @@
 package tmdb
 
 import (
-	"crypto/sha1"
+	"crypto/sha1" //nolint:gosec
 	"fmt"
 	"net/http"
 	"os"
@@ -101,7 +101,7 @@ func newClient(o *clientOptions) http.Client {
 // using a SHA1 hash of the method and URL.
 func cacheKey(req *http.Request) string {
 	key := fmt.Sprintf("%s%s", req.Method, req.URL.String())
-	h := sha1.New()
+	h := sha1.New() //nolint:gosec
 	h.Write([]byte(key))
 	key = fmt.Sprintf("%x", h.Sum(nil))
 

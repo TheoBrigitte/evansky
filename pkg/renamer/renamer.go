@@ -24,12 +24,6 @@ var (
 	deduplicationSuffix = "_"
 )
 
-// Renamer defines the interface for renaming media files based on provider metadata.
-type Renamer interface {
-	// Run executes the renaming process with the given source options
-	Run(source.Options) error
-}
-
 // renamer implements the Renamer interface and manages the state of the renaming process.
 type renamer struct {
 	// directories tracks directories that need to be created
@@ -76,7 +70,7 @@ type Entry struct {
 
 // New creates a new Renamer instance with the given paths, providers, and options.
 // It returns an error if no paths or providers are specified.
-func New(paths []string, providers []provider.Interface, o Options) (Renamer, error) {
+func New(paths []string, providers []provider.Interface, o Options) (*renamer, error) {
 	if len(paths) == 0 {
 		return nil, fmt.Errorf("at least one source is required")
 	}
@@ -165,7 +159,7 @@ func (r *renamer) Run(o source.Options) (err error) {
 	slices.Sort(dirs)
 	for _, dir := range slices.Compact(dirs) {
 		if r.o.Write {
-			err := os.MkdirAll(dir, 0o755)
+			err := os.MkdirAll(dir, 0o755) //nolint:gosec
 			if err != nil {
 				return fmt.Errorf("failed to create directory %q: %w", dir, err)
 			}
@@ -367,17 +361,17 @@ func copyFile(src, dst string) error {
 		return fmt.Errorf("%s is not a regular file", src)
 	}
 
-	source, err := os.Open(src)
+	source, err := os.Open(src) //nolint:gosec
 	if err != nil {
 		return fmt.Errorf("failed to open source file %q: %w", src, err)
 	}
-	defer source.Close()
+	defer source.Close() //nolint:errcheck
 
-	destination, err := os.Create(dst)
+	destination, err := os.Create(dst) //nolint:gosec
 	if err != nil {
 		return fmt.Errorf("failed to create destination file %q: %w", dst, err)
 	}
-	defer destination.Close()
+	defer destination.Close() //nolint:errcheck
 	_, err = io.Copy(destination, source)
 	return fmt.Errorf("failed to copy from %q to %q: %w", src, dst, err)
 }

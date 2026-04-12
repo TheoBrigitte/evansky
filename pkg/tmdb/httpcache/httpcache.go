@@ -14,7 +14,7 @@ package httpcache
 import (
 	"bufio"
 	"bytes"
-	"crypto/md5"
+	"crypto/md5" //nolint:gosec
 	"encoding/hex"
 	"errors"
 	"hash"
@@ -281,7 +281,7 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 						etag2 = etag
 					}
 				} else {
-					etagHash = md5.New()
+					etagHash = md5.New() //nolint:gosec
 					r = struct {
 						io.Reader
 						io.Closer

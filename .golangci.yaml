@@ -1,0 +1,12 @@
+version: "2"
+linters:
+  enable:
+    - errcheck
+    - govet
+    - gosec
+    - goconst
+    - nilnil
+    - modernize
+    - unused
+    - whitespace
+    - zerologlint

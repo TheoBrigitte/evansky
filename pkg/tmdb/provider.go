@@ -20,8 +20,8 @@ var (
 	apiKeyEnvVar string
 	cacheTTL     time.Duration
 
-	apiKeyFlag       = "tmdb-api-key"
-	apiKeyEnvVarFlag = "tmdb-api-key-env-var"
+	apiKeyFlag       = "tmdb-api-key"         //nolint:gosec
+	apiKeyEnvVarFlag = "tmdb-api-key-env-var" //nolint:gosec
 	cacheDir         string
 )
 

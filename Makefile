@@ -99,7 +99,7 @@ test: ## Run the complete test suite, optionally filtered by run_pattern or benc
 .PHONY: lint
 lint: ## Run golangci-lint for comprehensive code analysis (requires CGO environment)
 	@printf "$(CYAN)Running golangci-lint...$(RESET)\n"
-	golangci-lint run -E gosec -E goconst --timeout 10m --max-same-issues 0 --max-issues-per-linter 0 ./...
+	golangci-lint run --timeout 10m --max-same-issues 0 --max-issues-per-linter 0 ./...
 	@printf "$(GREEN)Linting completed$(RESET)\n"
 
 .PHONY: vet

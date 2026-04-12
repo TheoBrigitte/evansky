@@ -80,7 +80,8 @@ func (g *generic) findTVChildWithNumber(p provider.Interface, tv provider.Respon
 		return g.findTVEpisode(p, tv.GetSeasons(), req)
 	}
 
-	return nil, nil
+	// TODO: return a concrete error type to distinguish no match found from other errors
+	return nil, nil //nolint:nilnil
 }
 
 // findTVSeasonOrEpisode finds a TV show season or episode based on the request information.
