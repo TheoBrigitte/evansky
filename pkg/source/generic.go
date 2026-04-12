@@ -107,17 +107,21 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 		n.Type = NodeTypeSubtitle
 	}
 
+	// Skip entries that are explicitly excluded by glob patterns.
 	if slices.Contains(g.excludes, path) {
 		n.Error = fmt.Errorf("%w by glob", ErrExcludedPath)
 		return []Node{n}
 	}
 
+	// Skip entries that are excluded by regex patterns.
 	if g.excludeRegex != nil && g.excludeRegex.MatchString(path) {
 		n.Error = fmt.Errorf("%w by regex", ErrExcludedPath)
 		return []Node{n}
 	}
 
-	if g.includeRegex != nil && !g.includeRegex.MatchString(path) {
+	// Skip entries that are not included by regex patterns.
+	// Only check non-directory entries for include regex, as we want traverse directories and find only matching files.
+	if g.includeRegex != nil && !entry.IsDir() && !g.includeRegex.MatchString(path) {
 		n.Error = fmt.Errorf("%w not included by regex", ErrExcludedPath)
 		return []Node{n}
 	}
