@@ -53,8 +53,9 @@ func setLogLevel(cmd *cobra.Command, args []string) error {
 
 	// Set log to be printed on stderr with human-friendly format
 	log.Logger = log.Output(zerolog.ConsoleWriter{
-		Out:         os.Stderr,
-		FieldsOrder: []string{"level", "message", "destination", "source"},
+		Out:          os.Stderr,
+		PartsExclude: []string{"time"},
+		FieldsOrder:  []string{"level", "message", "destination", "source"},
 	})
 
 	return nil
