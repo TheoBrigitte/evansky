@@ -1,3 +1,4 @@
+// Package parser provides functions to parse torrent file names and extract relevant information such as title, year, season, episode, etc. It uses the go-parse-torrent-name library for parsing.
 package parser
 
 import (
