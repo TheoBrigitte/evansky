@@ -8,7 +8,6 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	"github.com/TheoBrigitte/evansky/cmd/completion"
 	cmdlog "github.com/TheoBrigitte/evansky/cmd/log"
 	"github.com/TheoBrigitte/evansky/cmd/rename"
 )
@@ -29,9 +28,9 @@ var (
 
 func init() {
 	rootCmd.SetVersionTemplate(`{{.Version}}{{"\n"}}`)
-	rootCmd.AddCommand(completion.Cmd)
 	rootCmd.AddCommand(rename.Cmd)
 	cmdlog.AddFlags(rootCmd)
+	rootCmd.InitDefaultCompletionCmd()
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
