@@ -169,7 +169,6 @@ func (m *tvResponse) InLanguage(req provider.Request) (provider.Response, error)
 	if r, ok := m.multi[req.DestinationLanguage]; ok {
 		m.tv = r
 	} else {
-
 		languageQuery := buildLanguageQuery(req.DestinationLanguage)
 		details, err := m.client.client.GetTVDetails(m.GetID(), languageQuery)
 		if err != nil {

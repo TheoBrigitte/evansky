@@ -86,7 +86,6 @@ func (m *tvEpisodeResponse) InLanguage(req provider.Request) (provider.Response,
 	if r, ok := m.multi[req.DestinationLanguage]; ok {
 		m.tvEpisode = r
 	} else {
-
 		languageQuery := buildLanguageQuery(req.DestinationLanguage)
 		details, err := m.client.GetTVEpisodeDetails(m.GetSeason().GetShow().GetID(), m.GetSeason().GetSeasonNumber(), m.GetID(), languageQuery)
 		if err != nil {

@@ -87,7 +87,7 @@ func (t *Transport) cachedResponse(req *http.Request) (*http.Response, bool, err
 	if err != nil {
 		return nil, false, err
 	}
-	//slog.Debug("cach hit", "key", cacheKey)
+	// slog.Debug("cach hit", "key", cacheKey)
 	return resp, ok, nil
 }
 
@@ -314,7 +314,7 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 					if err == nil {
 						// Signal any change back to the caller.
 						resp.Header.Set(XETag1, etag1)
-						//slog.Debug("cach miss", "key", cacheKey)
+						// slog.Debug("cach miss", "key", cacheKey)
 						t.Cache.Set(cacheKey, respBytes)
 					}
 				},
@@ -322,7 +322,6 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 			}
 			// Delay caching until EOF is reached.
 			resp.Body = r
-
 		}
 	} else {
 		t.Cache.Delete(cacheKey)
