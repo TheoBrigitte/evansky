@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	NoResults            = errors.New("no results")
-	UnsupportedMediaType = errors.New("unsupported media type")
+	ErrNoResults            = errors.New("no results")
+	ErrUnsupportedMediaType = errors.New("unsupported media type")
 )
 
 // release_date field format.
@@ -31,7 +31,7 @@ type Movie struct {
 	Error        string `json:"error,omitempty"`
 }
 
-// Path computes the ideal path for a movie given its title and year.
+// ComputePath computes the ideal path for a movie given its title and year.
 func (m *Movie) ComputePath() bool {
 	p := m.path()
 
@@ -56,7 +56,7 @@ func (m *Movie) path() string {
 // First one is considered best because searchMovies.Results response from the api is ordered with best matches first.
 func Best(searchMovies *gotmdb.SearchMovies) (*Movie, error) {
 	if len(searchMovies.Results) <= 0 {
-		return nil, NoResults
+		return nil, ErrNoResults
 	}
 
 	r := searchMovies.Results[0]
@@ -87,7 +87,7 @@ func Best(searchMovies *gotmdb.SearchMovies) (*Movie, error) {
 // searchMovies.Results entries are ordered with best matches first (0 is good, 499 is bad).
 func BestByYear(searchMovies *gotmdb.SearchMovies, year int) (*Movie, error) {
 	if len(searchMovies.Results) <= 0 {
-		return nil, NoResults
+		return nil, ErrNoResults
 	}
 
 	// compute delta and index.
@@ -105,7 +105,7 @@ func BestByYear(searchMovies *gotmdb.SearchMovies, year int) (*Movie, error) {
 		d := math.Abs(float64(year - date.Year()))
 		ii := i + 1
 		dd := d + 1
-		//log.Debugf("delta: date=%s index=%d delta=%f\n", searchMovies.Results[i].ReleaseDate, ii, dd)
+		// log.Debugf("delta: date=%s index=%d delta=%f\n", searchMovies.Results[i].ReleaseDate, ii, dd)
 		t = append(t, tmp{index: ii, delta: dd})
 	}
 
@@ -113,7 +113,7 @@ func BestByYear(searchMovies *gotmdb.SearchMovies, year int) (*Movie, error) {
 	sort.SliceStable(t, func(i, j int) bool {
 		a := float64(t[i].index) * t[i].delta
 		b := float64(t[j].index) * t[j].delta
-		//log.Debugf("sort: a=%#v => %f  b=%#v => %f\n", t[i], a, t[j], b)
+		// log.Debugf("sort: a=%#v => %f  b=%#v => %f\n", t[i], a, t[j], b)
 		return a < b
 	})
 

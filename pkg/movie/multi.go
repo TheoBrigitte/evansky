@@ -48,7 +48,7 @@ func (m *Multi) path() string {
 // First one is considered best because searchMovies.Results response from the api is ordered with best matches first.
 func BestMulti(searchMovies *gotmdb.SearchMulti) (*Multi, error) {
 	if len(searchMovies.Results) <= 0 {
-		return nil, NoResults
+		return nil, ErrNoResults
 	}
 
 	r := searchMovies.Results[0]
@@ -93,7 +93,7 @@ func BestMulti(searchMovies *gotmdb.SearchMulti) (*Multi, error) {
 // searchMovies.Results entries are ordered with best matches first (0 is good, 499 is bad).
 func BestByYearMulti(searchMovies *gotmdb.SearchMulti, year int) (*Multi, error) {
 	if len(searchMovies.Results) <= 0 {
-		return nil, NoResults
+		return nil, ErrNoResults
 	}
 
 	// compute delta and index.
@@ -122,7 +122,7 @@ func BestByYearMulti(searchMovies *gotmdb.SearchMulti, year int) (*Multi, error)
 		d := math.Abs(float64(year - date.Year()))
 		ii := i + 1
 		dd := d + 1
-		//log.Debugf("delta: date=%s index=%d delta=%f\n", searchMovies.Results[i].ReleaseDate, ii, dd)
+		// log.Debugf("delta: date=%s index=%d delta=%f\n", searchMovies.Results[i].ReleaseDate, ii, dd)
 		t = append(t, tmp{index: ii, delta: dd})
 	}
 
@@ -130,7 +130,7 @@ func BestByYearMulti(searchMovies *gotmdb.SearchMulti, year int) (*Multi, error)
 	sort.SliceStable(t, func(i, j int) bool {
 		a := float64(t[i].index) * t[i].delta
 		b := float64(t[j].index) * t[j].delta
-		//log.Debugf("sort: a=%#v => %f  b=%#v => %f\n", t[i], a, t[j], b)
+		// log.Debugf("sort: a=%#v => %f  b=%#v => %f\n", t[i], a, t[j], b)
 		return a < b
 	})
 
