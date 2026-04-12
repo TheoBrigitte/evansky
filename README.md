@@ -2,11 +2,11 @@
 
 CLI tool used to organize/rename media files, in order to be correctly detected by media server (e.g. [jellyfin](https://jellyfin.org/), [emby](https://emby.media/), [kodi](https://kodi.tv/)).
 
-It does so by parsing each directory/file name using [middelink](https://github.com/middelink/go-parse-torrent-name)'s parser and match result against [TheMovieDatabase API](https://developers.themoviedb.org/3/search/search-movies).
+It does so by parsing each directory/file name using [middelink](https://github.com/middelink/go-parse-torrent-name)'s parser and match result against [TheMovieDatabase API](https://www.themoviedb.org/).
 
-`evansky` does cache scan results in order to guarantee that the directory/file being renamed are the one which where scanned. When changes occurs, directory need to be re-scanned.
+`evansky` does cache scan results in order to guarantee that applied directory/file renaming is the same as the one from the initial dry-run preview.
 
-`evansky` follow naming convention as per the [Jellyfin documentation](https://jellyfin.org/docs/general/server/media/movies.html).
+`evansky` follow naming convention as per the [Jellyfin documentation](https://jellyfin.org/docs/general/server/media/movies/).
 
 ## Requirement
 
@@ -15,55 +15,31 @@ It does so by parsing each directory/file name using [middelink](https://github.
 ## Run
 
 ```
-$ evansky directory scan --apiKey my-api-key /path/to/dir
-scanning /path/to/dir
-scanned 23 file(s), found 23 result(s)
-
-$ evansky directory show /path/to/dir
-                                                        original              new
-                                                        --------              ---
-                           test1.1997.1080p.BluRay.x264.anoXmous     test1 (1997)
-    test2 1977 1080p Bluray x265 10Bit AAC 2.0 - GetSchwifty.mkv     test2 (1978)
-                                   test3 (2017) [1080p] [YTS.AM]     test3 (2017)
-                    test4 (1980) [1080p] [BluRay] [5.1] [YTS.MX]     test4 (1980)
-                                            test5 (1982) [1080p]     test5 (1982)
-                        test6.1935.1080p.HDTV.x264-REGRET[rarbg]     test6 (1935)
-                          test7 (1973) [1080p] [BluRay] [YTS.MX]     test7 (1973)
-                          test8 (1987) [BluRay] [1080p] [YTS.AM]     test8 (1987)
-                          test9 (1984) [BluRay] [1080p] [YTS.AM]     test9 (1984)
-                         test10.1984.1080p.BluRay.H264.AAC-RARBG    test10 (1984)
-                         test11 (1958) [BluRay] [1080p] [YTS.LT]    test11 (1958)
-                                           test12 (2001) [1080p]    test12 (2001)
-                                           test13 (2001) - 1080p    test13 (2001)
-                    test14.2012.720p.BluRay.x264-LOST [PublicHD]    test14 (2012)
-                         test15 (2001) 1080p BluRay.x264 SUJAIDR    test15 (2001)
-                  test16.2011.LIMITED.1080p.BluRay.x264.anoXmous    test16 (2011)
-                    test17 (1996) 1080p BluRay x265 HEVC SUJAIDR    test17 (1996)
-                                       test18.1999.director name    test18 (1999)
-                test19.EXTENDED.KOREAN.1080p.BluRay.H264.AAC-VXT    test19 (2016)
-                          test20.1984.1080p.BluRay.x264.anoXmous    test20 (1984)
-              test21.1975.Criterion.1080p.BluRay.HEVC.AAC-SARTRE    test21 (1975)
-                         test22 (director name, 1970).ru-eng.avi    test22 (1970)
-               test23.2020.repack.1080p.web.hevc.x265.rmteam.mkv    test23 (2020)
-
-23/23 result(s)  100% complete
-
-$ evansky directory rename --force /path/to/dir
-> renaming
-> renamed 23 file(s)
-> cleaned cache /path/to/.cache/evansky/7ce101c7b750d72a018612aeaae80e69
+$ export TMDB_API_KEY="your api key"
+$ evansky rename /path/to/dir
+INF [dry-run] renamed source="test1.1997.1080p.BluRay.x264.anoXmous" destination="test1 (1997)"
+INF [dry-run] renamed source="test2 1977 1080p Bluray x265 10Bit AAC 2.0 - GetSchwifty.mkv" destination="test2 (1978)"
+INF [dry-run] renamed source="test3 (2017) [1080p] [YTS.AM]" destination="test3 (2017)"
+INF [dry-run] renamed source="test4 (1980) [1080p] [BluRay] [5.1] [YTS.MX]" destination="test4 (1980)"
+INF [dry-run] renamed source="test5 (1982) [1080p]" destination="test5 (1982)"
+INF [dry-run] renamed source="test6.1935.1080p.HDTV.x264-REGRET[rarbg]" destination="test6 (1935)"
+INF [dry-run] renamed source="test7 (1973) [1080p] [BluRay] [YTS.MX]" destination="test7 (1973)"
+INF [dry-run] renamed source="test8 (1987) [BluRay] [1080p] [YTS.AM]" destination="test8 (1987)"
+INF [dry-run] renamed source="test9 (1984) [BluRay] [1080p] [YTS.AM]" destination="test9 (1984)"
+INF [dry-run] renamed source="test10.1984.1080p.BluRay.H264.AAC-RARBG" destination="test10 (1984)"
+INF [dry-run] renamed source="test11 (1958) [BluRay] [1080p] [YTS.LT]" destination="test11 (1958)"
+INF [dry-run] renamed source="test12 (2001) [1080p]" destination="test12 (2001)"
+INF [dry-run] renamed source="test13 (2001) - 1080p" destination="test13 (2001)"
+INF [dry-run] renamed source="test14.2012.720p.BluRay.x264-LOST [PublicHD]" destination="test14 (2012)"
+INF [dry-run] renamed source="test15 (2001) 1080p BluRay.x264 SUJAIDR" destination="test15 (2001)"
+INF [dry-run] renamed source="test16.2011.LIMITED.1080p.BluRay.x264.anoXmous" destination="test16 (2011)"
+INF [dry-run] renamed source="test17 (1996) 1080p BluRay x265 HEVC SUJAIDR" destination="test17 (1996)"
+INF [dry-run] renamed source="test18.1999.director name" destination="test18 (1999)"
+INF [dry-run] renamed source="test19.EXTENDED.KOREAN.1080p.BluRay.H264.AAC-VXT" destination="test19 (2016)"
+INF [dry-run] renamed source="test20.1984.1080p.BluRay.x264.anoXmous" destination="test20 (1984)"
+INF [dry-run] renamed source="test21.1975.Criterion.1080p.BluRay.HEVC.AAC-SARTRE" destination="test21 (1975)"
+INF [dry-run] renamed source="test22 (director name, 1970).ru-eng.avi" destination="test22 (1970)"
+INF [dry-run] renamed source="test23.2020.repack.1080p.web.hevc.x265.rmteam.mkv" destination="test23 (2020)"
+INF [dry-run] renamed 23/23 file(s)
+$ # Run the same command with --write to apply changes
 ```
-
-## Clean
-
-```
-$ evansky cache clean -f
-1 cache entries found
-/path/to/.cache/evansky/7ce101c7b750d72a018612aeaae80e69 removed
-```
-
-## TODO
-
-* fix/warn about duplicate target path
-* add support for tv shows
-* add support for music
