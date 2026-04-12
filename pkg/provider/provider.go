@@ -1,3 +1,4 @@
+// Package provider provides interfaces and types for metadata providers that fetch information about movies and TV shows.
 package provider
 
 import (

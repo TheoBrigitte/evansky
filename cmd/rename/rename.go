@@ -1,3 +1,4 @@
+// Package rename implements the "rename" command, which renames and organizes directory content based on metadata providers and user-defined options.
 package rename
 
 import (

@@ -1,3 +1,4 @@
+// Package tmdb provides a client for The Movie Database (TMDB) API.
 package tmdb
 
 import (
