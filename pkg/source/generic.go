@@ -78,7 +78,7 @@ func (g *generic) scan() ([]Node, error) {
 	}
 
 	// Start walking the directory tree.
-	return g.walk(g.path, dirInfo, 0, nil, nil), nil
+	return g.walk(g.path, dirInfo, 0, nil), nil
 }
 
 // walk recursively walks the directory tree and processes each file or directory.
@@ -87,7 +87,7 @@ func (g *generic) scan() ([]Node, error) {
 // 2. Detects the language based on directory contents
 // 3. Queries metadata providers to get accurate information
 // 4. Generates nodes for files or continues recursion for directories
-func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp provider.Response, siblingNodes []Node) []Node {
+func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp provider.Response) []Node {
 	n := Node{
 		Entry: entry,
 		Path:  path,
@@ -238,7 +238,7 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 		// Build the next path as: current path + entry name.
 		nextPath := filepath.Join(path, nextEntry.Name())
 		// TODO: allow for non-recursive scan
-		childNodes := g.walk(nextPath, nextEntry, depth, resp, nodes)
+		childNodes := g.walk(nextPath, nextEntry, depth, resp)
 		if childNodes == nil {
 			continue
 		}

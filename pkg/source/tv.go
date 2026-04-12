@@ -174,7 +174,7 @@ func (g *generic) findTVEpisodeInSeasons(p provider.Interface, seasons []provide
 }
 
 func (g *generic) findTVEpisodeAbsoluteNumber(p provider.Interface, seasons []provider.ResponseTVSeason, req provider.Request) (provider.Response, error) {
-	var absoluteNumber int = 0
+	absoluteNumber := 0
 	for _, season := range seasons {
 		if season.GetSeasonNumber() == 0 {
 			// Skip season 0 (specials) for absolute numbering
