@@ -30,9 +30,9 @@ var (
 func init() {
 	flags = NewFlags()
 
-	Cmd.PersistentFlags().StringVar(&flags.excludeGlob, "exclude", "", "exclude files matching the given glob pattern")
-	Cmd.PersistentFlags().StringVar(&flags.excludeRegex, "exclude-regex", "", "exclude files matching the given regular expression")
-	Cmd.PersistentFlags().StringVar(&flags.includeRegex, "include-regex", "", "include files matching the given regular expression")
+	Cmd.PersistentFlags().StringVar(&flags.excludeGlob, "exclude", "", "exclude files or directories matching the given glob pattern")
+	Cmd.PersistentFlags().StringVar(&flags.excludeRegex, "exclude-regex", "", "exclude files or directories matching the given regular expression")
+	Cmd.PersistentFlags().StringVar(&flags.includeRegex, "include-regex", "", "only rename files matching the given regular expression")
 	Cmd.PersistentFlags().BoolVarP(&flags.force, "force", "f", false, "overwrite existing destination files")
 	Cmd.PersistentFlags().StringVar(&flags.language, "language", "en", "language used for destination names (ISO 639-1 code)")
 	Cmd.PersistentFlags().StringSliceVar(&flags.mediaExtensions, "media-ext", []string{"mkv", "mp4", "avi", "mov", "wmv", "flv", "mpg", "mpeg"}, "media file extensions to consider")
