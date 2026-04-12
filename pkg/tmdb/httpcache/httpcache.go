@@ -506,7 +506,7 @@ func getEndToEndHeaders(respHeaders http.Header) []string {
 		"Upgrade":             {},
 	}
 
-	for _, extra := range strings.Split(respHeaders.Get("connection"), ",") {
+	for extra := range strings.SplitSeq(respHeaders.Get("connection"), ",") {
 		// any header listed in connection, if present, is also considered hop-by-hop
 		if strings.Trim(extra, " ") != "" {
 			hopByHopHeaders[http.CanonicalHeaderKey(extra)] = struct{}{}
@@ -561,7 +561,7 @@ type cacheControl map[string]string
 func parseCacheControl(headers http.Header) cacheControl {
 	cc := cacheControl{}
 	ccHeader := headers.Get("Cache-Control")
-	for _, part := range strings.Split(ccHeader, ",") {
+	for part := range strings.SplitSeq(ccHeader, ",") {
 		part = strings.Trim(part, " ")
 		if part == "" {
 			continue
