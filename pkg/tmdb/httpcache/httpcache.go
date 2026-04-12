@@ -201,13 +201,13 @@ func (t *Transport) RoundTrip(req *http.Request) (resp *http.Response, err error
 				// Add validators if caller hasn't already done so
 				etag := cachedResp.Header.Get("etag")
 				if etag != "" && req.Header.Get("etag") == "" {
-					req2 = cloneRequest(req)
+					req2 = req.Clone(req.Context())
 					req2.Header.Set("if-none-match", etag)
 				}
 				lastModified := cachedResp.Header.Get("last-modified")
 				if lastModified != "" && req.Header.Get("last-modified") == "" {
 					if req2 == nil {
-						req2 = cloneRequest(req)
+						req2 = req.Clone(req.Context())
 					}
 					req2.Header.Set("if-modified-since", lastModified)
 				}
@@ -539,21 +539,6 @@ func newGatewayTimeoutResponse(req *http.Request) *http.Response {
 		panic(err)
 	}
 	return resp
-}
-
-// cloneRequest returns a clone of the provided *http.Request.
-// The clone is a shallow copy of the struct and its Header map.
-// (This function copyright goauth2 authors: https://code.google.com/p/goauth2)
-func cloneRequest(r *http.Request) *http.Request {
-	// shallow copy of the struct
-	r2 := new(http.Request)
-	*r2 = *r
-	// deep copy of the Header
-	r2.Header = make(http.Header)
-	for k, s := range r.Header {
-		r2.Header[k] = s
-	}
-	return r2
 }
 
 type cacheControl map[string]string
