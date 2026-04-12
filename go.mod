@@ -78,4 +78,4 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 
-replace github.com/middelink/go-parse-torrent-name => ../go-parse-torrent-name
+replace github.com/middelink/go-parse-torrent-name => ./pkg/go-parse-torrent-name
