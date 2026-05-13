@@ -47,8 +47,8 @@ func (f JellyfinFormatter) TVEpisode(e provider.ResponseTVEpisode, n source.Node
 
 	// Padding based on total number of seasons/episodes
 	// e.g. S01E01 for less than 10 seasons/episodes, S001E001 for less than 100 seasons/episodes, etc.
-	seasonPadding := len(strconv.Itoa(len(show.GetSeasons())))
-	episodePadding := len(strconv.Itoa(len(season.GetEpisodes())))
+	seasonPadding := max(2, len(strconv.Itoa(len(show.GetSeasons()))))
+	episodePadding := max(2, len(strconv.Itoa(len(season.GetEpisodes()))))
 
 	episodeFormat := fmt.Sprintf("%s - S%0*dE%0*d - %s", show.GetName(), seasonPadding, season.GetSeasonNumber(), episodePadding, e.GetEpisodeNumber(), e.GetName())
 
