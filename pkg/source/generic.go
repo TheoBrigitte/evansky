@@ -36,6 +36,14 @@ type generic struct {
 	providers []provider.Interface // List of metadata providers to query
 }
 
+func New(path string, providers []provider.Interface, o Options) *generic {
+	return &generic{
+		path:      path,
+		providers: providers,
+		options:   o,
+	}
+}
+
 // scan scans the source path and returns a list of nodes.
 // It starts by getting information about the root path and then recursively
 // walks the directory tree to process each file and directory.

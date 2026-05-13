@@ -69,11 +69,7 @@ type Options struct {
 // performs a scan operation with the given parameters.
 // It returns a list of nodes representing potential rename operations.
 func Scan(path string, providers []provider.Interface, o Options) []Node {
-	s := &generic{
-		path:      path,
-		providers: providers,
-		options:   o,
-	}
+	s := New(path, providers, o)
 
 	nodes, err := s.scan()
 	if err != nil {
