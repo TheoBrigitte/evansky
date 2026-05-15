@@ -4,7 +4,7 @@ import (
 	"math"
 )
 
-func computePopularity(popularity, voteAverage float32, voteCount int64) int {
+func computePopularity(popularity, voteAverage float64, voteCount int) int {
 	if voteCount == 0 {
 		return 0
 	}

@@ -4,7 +4,7 @@ import (
 	"math"
 	"time"
 
-	gotmdb "github.com/cyruzin/golang-tmdb"
+	"github.com/golusoris/goenvoy/metadata/video/tmdb"
 	"github.com/rs/zerolog/log"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
@@ -14,17 +14,17 @@ import (
 type movieResponse struct {
 	*movie
 	multi  map[string]*movie
-	client *gotmdb.Client
+	client *Client
 
 	provider.ResponseBaseMovie
 }
 
 type movie struct {
-	result      gotmdb.MovieResult
+	result      tmdb.MovieResult
 	releaseDate time.Time
 }
 
-func (c *Client) newMovieResponse(result gotmdb.MovieResult, lang string) (*movieResponse, error) {
+func (c *Client) newMovieResponse(result tmdb.MovieResult, lang string) (*movieResponse, error) {
 	m, err := newMovie(result)
 	if err != nil {
 		return nil, err
@@ -32,7 +32,7 @@ func (c *Client) newMovieResponse(result gotmdb.MovieResult, lang string) (*movi
 
 	multi := &movieResponse{
 		movie:             m,
-		client:            c.client,
+		client:            c,
 		ResponseBaseMovie: provider.NewResponseBaseMovie(),
 	}
 	multi.multi = map[string]*movie{
@@ -42,7 +42,7 @@ func (c *Client) newMovieResponse(result gotmdb.MovieResult, lang string) (*movi
 	return multi, nil
 }
 
-func newMovie(result gotmdb.MovieResult) (m *movie, err error) {
+func newMovie(result tmdb.MovieResult) (m *movie, err error) {
 	m = &movie{
 		result: result,
 	}
@@ -75,10 +75,10 @@ func (r movie) GetPopularity() int {
 	return computePopularity(r.result.Popularity, r.result.VoteAverage, r.result.VoteCount)
 }
 
-func movieByClosestYear(query string, year int, movies []gotmdb.MovieResult) (gotmdb.MovieResult, float64) {
+func movieByClosestYear(query string, year int, movies []tmdb.MovieResult) (tmdb.MovieResult, float64) {
 	var bestScore float64 = -1
 	var bestTitleScore float64 = 0
-	var closestMatch gotmdb.MovieResult
+	var closestMatch tmdb.MovieResult
 
 	for index, t := range movies {
 		var yearScore float64
@@ -134,13 +134,13 @@ func (m *movieResponse) InLanguage(req provider.Request) (provider.Response, err
 		m.movie = r
 	} else {
 		languageQuery := buildLanguageQuery(req.DestinationLanguage)
-		details, err := m.client.GetMovieDetails(m.GetID(), languageQuery)
+		details, err := m.client.client.GetMovie(m.client.ctx, m.GetID(), languageQuery)
 		if err != nil {
 			return nil, err
 		}
 
 		// TODO: fetch the movie details in newMovie, so we can also store the full details here
-		result := gotmdb.MovieResult{
+		result := tmdb.MovieResult{
 			ID:               details.ID,
 			Title:            details.Title,
 			OriginalTitle:    details.OriginalTitle,
@@ -152,7 +152,8 @@ func (m *movieResponse) InLanguage(req provider.Request) (provider.Response, err
 			Popularity:       details.Popularity,
 			Adult:            details.Adult,
 			Video:            details.Video,
-			VoteMetrics:      details.VoteMetrics,
+			VoteAverage:      details.VoteAverage,
+			VoteCount:        details.VoteCount,
 		}
 
 		movie, err := newMovie(result)

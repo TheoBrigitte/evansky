@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	gotmdb "github.com/cyruzin/golang-tmdb"
+	"github.com/golusoris/goenvoy/metadata/video/tmdb"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
 )
@@ -17,14 +17,14 @@ type tvSeasonResponse struct {
 }
 
 type tvSeason struct {
-	result  gotmdb.TVSeasonDetails
+	result  tmdb.SeasonDetails
 	airDate time.Time
 	show    provider.ResponseTV
 	// Language indexed episodes cache
 	episodes []provider.ResponseTVEpisode
 }
 
-func (c *Client) newTVSeasonResponse(result gotmdb.TVSeasonDetails, show provider.ResponseTV, req provider.Request) (*tvSeasonResponse, error) {
+func (c *Client) newTVSeasonResponse(result tmdb.SeasonDetails, show provider.ResponseTV, req provider.Request) (*tvSeasonResponse, error) {
 	m := &tvSeasonResponse{
 		multi:                make(map[string]*tvSeason),
 		client:               c,
@@ -39,7 +39,7 @@ func (c *Client) newTVSeasonResponse(result gotmdb.TVSeasonDetails, show provide
 	return m, nil
 }
 
-func (m *tvSeasonResponse) init(result gotmdb.TVSeasonDetails, show provider.ResponseTV, req provider.Request) error {
+func (m *tvSeasonResponse) init(result tmdb.SeasonDetails, show provider.ResponseTV, req provider.Request) error {
 	m.tvSeason = &tvSeason{
 		result: result,
 		show:   show,
@@ -56,15 +56,15 @@ func (m *tvSeasonResponse) init(result gotmdb.TVSeasonDetails, show provider.Res
 	}
 
 	languageQuery := buildLanguageQuery(req.DestinationLanguage)
-	season, err := m.client.client.GetTVSeasonDetails(show.GetID(), result.SeasonNumber, languageQuery)
+	season, err := m.client.client.GetTVSeason(m.client.ctx, show.GetID(), result.SeasonNumber, languageQuery)
 	if err != nil {
 		return err
 	}
 
 	episodes := make([]provider.ResponseTVEpisode, 0, len(season.Episodes))
 	for _, e := range season.Episodes {
-		// This is a dirty way to convert an episode to gotmdb.TVEpisodeDetails, as season.Episodes has no concrete type.
-		var ed gotmdb.TVEpisodeDetails
+		// This is a dirty way to convert an episode to tmdb.TVEpisodeDetails, as season.Episodes has no concrete type.
+		var ed tmdb.EpisodeDetails
 		ed.AirDate = e.AirDate
 		ed.EpisodeNumber = e.EpisodeNumber
 		ed.ID = e.ID
@@ -74,9 +74,8 @@ func (m *tvSeasonResponse) init(result gotmdb.TVSeasonDetails, show provider.Res
 		ed.Runtime = e.Runtime
 		ed.SeasonNumber = e.SeasonNumber
 		ed.StillPath = e.StillPath
-		ed.VoteMetrics = e.VoteMetrics
-		ed.Crew = e.Crew
-		ed.GuestStars = e.GuestStars
+		ed.VoteAverage = e.VoteAverage
+		ed.VoteCount = e.VoteCount
 		episode, err := m.client.newTVEpisodeResponse(ed, m, req.DestinationLanguage)
 		if err != nil {
 			return err
@@ -136,7 +135,7 @@ func (m *tvSeasonResponse) InLanguage(req provider.Request) (provider.Response, 
 		m.tvSeason = r
 	} else {
 		languageQuery := buildLanguageQuery(req.DestinationLanguage)
-		details, err := m.client.client.GetTVSeasonDetails(m.GetShow().GetID(), m.GetSeasonNumber(), languageQuery)
+		details, err := m.client.client.GetTVSeason(m.client.ctx, m.GetShow().GetID(), m.GetSeasonNumber(), languageQuery)
 		if err != nil {
 			return nil, err
 		}

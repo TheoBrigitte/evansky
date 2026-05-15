@@ -1,9 +1,10 @@
 package tmdb
 
 import (
+	"context"
 	"time"
 
-	gotmdb "github.com/cyruzin/golang-tmdb"
+	"github.com/golusoris/goenvoy/metadata/video/tmdb"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
 )
@@ -11,18 +12,19 @@ import (
 type tvEpisodeResponse struct {
 	*tvEpisode
 	multi  map[string]*tvEpisode
-	client *gotmdb.Client
+	client *tmdb.Client
+	ctx    context.Context
 
 	provider.ResponseBaseTVEpisode
 }
 
 type tvEpisode struct {
-	result  gotmdb.TVEpisodeDetails
+	result  tmdb.EpisodeDetails
 	airDate time.Time
 	season  provider.ResponseTVSeason
 }
 
-func (c *Client) newTVEpisodeResponse(result gotmdb.TVEpisodeDetails, season provider.ResponseTVSeason, lang string) (*tvEpisodeResponse, error) {
+func (c *Client) newTVEpisodeResponse(result tmdb.EpisodeDetails, season provider.ResponseTVSeason, lang string) (*tvEpisodeResponse, error) {
 	t, err := newTVEpisode(result, season)
 	if err != nil {
 		return nil, err
@@ -31,6 +33,7 @@ func (c *Client) newTVEpisodeResponse(result gotmdb.TVEpisodeDetails, season pro
 	m := &tvEpisodeResponse{
 		tvEpisode:             t,
 		client:                c.client,
+		ctx:                   c.ctx,
 		ResponseBaseTVEpisode: provider.NewResponseBaseTVEpisode(),
 	}
 	m.multi = map[string]*tvEpisode{
@@ -40,7 +43,7 @@ func (c *Client) newTVEpisodeResponse(result gotmdb.TVEpisodeDetails, season pro
 	return m, nil
 }
 
-func newTVEpisode(result gotmdb.TVEpisodeDetails, season provider.ResponseTVSeason) (t *tvEpisode, err error) {
+func newTVEpisode(result tmdb.EpisodeDetails, season provider.ResponseTVSeason) (t *tvEpisode, err error) {
 	t = &tvEpisode{
 		result: result,
 		season: season,
@@ -87,7 +90,7 @@ func (m *tvEpisodeResponse) InLanguage(req provider.Request) (provider.Response,
 		m.tvEpisode = r
 	} else {
 		languageQuery := buildLanguageQuery(req.DestinationLanguage)
-		details, err := m.client.GetTVEpisodeDetails(m.GetSeason().GetShow().GetID(), m.GetSeason().GetSeasonNumber(), m.GetID(), languageQuery)
+		details, err := m.client.GetTVEpisode(m.ctx, m.GetSeason().GetShow().GetID(), m.GetSeason().GetSeasonNumber(), m.GetID(), languageQuery)
 		if err != nil {
 			return nil, err
 		}

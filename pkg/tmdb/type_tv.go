@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	gotmdb "github.com/cyruzin/golang-tmdb"
+	"github.com/golusoris/goenvoy/metadata/video/tmdb"
 	"github.com/rs/zerolog/log"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
@@ -20,13 +20,13 @@ type tvResponse struct {
 }
 
 type tv struct {
-	result       gotmdb.TVShowResult
+	result       tmdb.TVResult
 	firstAirDate time.Time
 	// Language indexed seasons cache
 	seasons []provider.ResponseTVSeason
 }
 
-func (c *Client) newTVResponse(result gotmdb.TVShowResult, req provider.Request) (*tvResponse, error) {
+func (c *Client) newTVResponse(result tmdb.TVResult, req provider.Request) (*tvResponse, error) {
 	m := &tvResponse{
 		multi:          make(map[string]*tv),
 		client:         c,
@@ -41,7 +41,7 @@ func (c *Client) newTVResponse(result gotmdb.TVShowResult, req provider.Request)
 	return m, nil
 }
 
-func (m *tvResponse) init(result gotmdb.TVShowResult, req provider.Request) error {
+func (m *tvResponse) init(result tmdb.TVResult, req provider.Request) error {
 	m.tv = &tv{
 		result: result,
 	}
@@ -57,14 +57,14 @@ func (m *tvResponse) init(result gotmdb.TVShowResult, req provider.Request) erro
 	}
 
 	languageQuery := buildLanguageQuery(req.DestinationLanguage)
-	resp, err := m.client.client.GetTVDetails(m.GetID(), languageQuery)
+	resp, err := m.client.client.GetTV(m.client.ctx, m.GetID(), languageQuery)
 	if err != nil {
 		return err
 	}
 
 	seasons := make([]provider.ResponseTVSeason, 0, len(resp.Seasons))
 	for _, s := range resp.Seasons {
-		season, err := m.client.client.GetTVSeasonDetails(m.GetID(), s.SeasonNumber, languageQuery)
+		season, err := m.client.client.GetTVSeason(m.client.ctx, m.GetID(), s.SeasonNumber, languageQuery)
 		if err != nil {
 			return err
 		}
@@ -115,10 +115,10 @@ func (r tv) GetSeason(seasonNumber int) (provider.ResponseTVSeason, error) {
 	return nil, fmt.Errorf("season %d not found for show %d", seasonNumber, r.GetID())
 }
 
-func tvshowByClosestYear(query string, year int, tvshows []gotmdb.TVShowResult) (gotmdb.TVShowResult, float64) {
+func tvshowByClosestYear(query string, year int, tvshows []tmdb.TVResult) (tmdb.TVResult, float64) {
 	var bestScore float64 = -1
 	var bestTitleScore float64 = 0
-	var closestMatch gotmdb.TVShowResult
+	var closestMatch tmdb.TVResult
 
 	for index, t := range tvshows {
 		var yearScore float64
@@ -170,12 +170,12 @@ func (m *tvResponse) InLanguage(req provider.Request) (provider.Response, error)
 		m.tv = r
 	} else {
 		languageQuery := buildLanguageQuery(req.DestinationLanguage)
-		details, err := m.client.client.GetTVDetails(m.GetID(), languageQuery)
+		details, err := m.client.client.GetTV(m.client.ctx, m.GetID(), languageQuery)
 		if err != nil {
 			return nil, err
 		}
 
-		result := gotmdb.TVShowResult{
+		result := tmdb.TVResult{
 			ID:               details.ID,
 			Name:             details.Name,
 			OriginalName:     details.OriginalName,
@@ -186,7 +186,8 @@ func (m *tvResponse) InLanguage(req provider.Request) (provider.Response, error)
 			BackdropPath:     details.BackdropPath,
 			Popularity:       details.Popularity,
 			OriginCountry:    details.OriginCountry,
-			VoteMetrics:      details.VoteMetrics,
+			VoteAverage:      details.VoteAverage,
+			VoteCount:        details.VoteCount,
 		}
 
 		err = m.init(result, req)

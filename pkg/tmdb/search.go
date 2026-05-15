@@ -3,8 +3,9 @@ package tmdb
 import (
 	"errors"
 	"strconv"
+	"strings"
 
-	gotmdb "github.com/cyruzin/golang-tmdb"
+	"github.com/golusoris/goenvoy/metadata/video/tmdb"
 	"github.com/rs/zerolog/log"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
@@ -29,10 +30,10 @@ func (c *Client) SearchMovie(req provider.Request) (provider.ResponseMovie, floa
 	return resp, score, err
 }
 
-func (c *Client) searchMovie(req provider.Request) (*gotmdb.SearchMovies, error) {
-	additionalQuery := buildAdditionalQuery(req)
-	log.Debug().Str("query", req.Query).Any("additionalQuery", additionalQuery).Msg("searching movie")
-	movies, err := c.client.GetSearchMovies(req.Query, additionalQuery)
+func (c *Client) searchMovie(req provider.Request) (*tmdb.PaginatedResult[tmdb.MovieResult], error) {
+	query := buildAdditionalQuery(req)
+	log.Debug().Str("query", query).Any("language", req.QueryLanguage).Msg("searching movie")
+	movies, err := c.client.SearchMovies(c.ctx, query, req.QueryLanguage, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -62,10 +63,10 @@ func (c *Client) SearchTV(req provider.Request) (provider.ResponseTV, float64, e
 	return resp, score, err
 }
 
-func (c *Client) searchTV(req provider.Request) (*gotmdb.SearchTVShows, error) {
-	additionalQuery := buildAdditionalQuery(req)
-	log.Debug().Str("query", req.Query).Any("additionalQuery", additionalQuery).Msg("searching tv")
-	tvshows, err := c.client.GetSearchTVShow(req.Query, additionalQuery)
+func (c *Client) searchTV(req provider.Request) (*tmdb.PaginatedResult[tmdb.TVResult], error) {
+	query := buildAdditionalQuery(req)
+	log.Debug().Str("query", query).Any("language", req.QueryLanguage).Msg("searching tv")
+	tvshows, err := c.client.SearchTV(c.ctx, query, req.QueryLanguage, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -76,21 +77,14 @@ func (c *Client) searchTV(req provider.Request) (*gotmdb.SearchTVShows, error) {
 	return tvshows, nil
 }
 
-func buildAdditionalQuery(req provider.Request) map[string]string {
-	additionalQuery := make(map[string]string)
+func buildAdditionalQuery(req provider.Request) string {
+	e := []string{req.Query}
 	if req.Year != 0 {
-		additionalQuery["year"] = strconv.Itoa(req.Year)
+		e = append(e, strconv.Itoa(req.Year))
 	}
-	if req.QueryLanguage != "" {
-		additionalQuery["language"] = req.QueryLanguage
-	}
-	return additionalQuery
+	return strings.Join(e, "&")
 }
 
-func buildLanguageQuery(language string) map[string]string {
-	additionalQuery := make(map[string]string)
-	if language != "" {
-		additionalQuery["language"] = language
-	}
-	return additionalQuery
+func buildLanguageQuery(language string) string {
+	return language
 }

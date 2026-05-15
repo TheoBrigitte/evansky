@@ -1,12 +1,13 @@
 module github.com/TheoBrigitte/evansky
 
-go 1.25.0
+go 1.26.1
 
 require (
 	github.com/abadojack/whatlanggo v1.0.1
 	github.com/adrg/strutil v0.3.1
-	github.com/cyruzin/golang-tmdb v1.9.2
 	github.com/gohugoio/hugo v0.160.1
+	github.com/golusoris/goenvoy/metadata v1.2.1
+	github.com/golusoris/goenvoy/metadata/video/tmdb v1.3.0
 	github.com/middelink/go-parse-torrent-name v0.0.0-20190301154245-3ff4efacd4c4
 	github.com/pemistahl/lingua-go v1.4.0
 	github.com/prometheus/common v0.67.5

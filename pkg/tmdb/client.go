@@ -2,6 +2,7 @@
 package tmdb
 
 import (
+	"context"
 	"crypto/sha1" //nolint:gosec
 	"fmt"
 	"net/http"
@@ -9,8 +10,9 @@ import (
 	"path/filepath"
 	"time"
 
-	gotmdb "github.com/cyruzin/golang-tmdb"
 	"github.com/gohugoio/hugo/cache/filecache"
+	"github.com/golusoris/goenvoy/metadata"
+	"github.com/golusoris/goenvoy/metadata/video/tmdb"
 	"github.com/spf13/afero"
 	"github.com/spf13/pflag"
 
@@ -37,17 +39,14 @@ func New(flags *pflag.FlagSet) (provider.Interface, error) {
 		cd = filepath.Join(dir, defaultCacheDir)
 	}
 
-	tmdbClient, err := gotmdb.Init(apiKey)
-	if err != nil {
-		return nil, err
-	}
-	tmdbClient.SetClientConfig(newClient(&clientOptions{
+	tmdbClient := tmdb.New(apiKey, metadata.WithHTTPClient(newClient(&clientOptions{
 		cacheDir: cd,
 		ttl:      cacheTTL,
-	}))
+	})))
 
 	c := &Client{
 		client: tmdbClient,
+		ctx:    context.TODO(),
 	}
 
 	return c, nil
@@ -63,7 +62,7 @@ type clientOptions struct {
 }
 
 // newClient returns a new http.Client with caching capabilities if ttl > 0.
-func newClient(o *clientOptions) http.Client {
+func newClient(o *clientOptions) *http.Client {
 	var transport http.RoundTripper
 
 	if o != nil && o.ttl > 0 {
@@ -95,7 +94,7 @@ func newClient(o *clientOptions) http.Client {
 		transport = http.DefaultTransport
 	}
 
-	return http.Client{
+	return &http.Client{
 		Transport: transport,
 	}
 }

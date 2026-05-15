@@ -1,10 +1,13 @@
 package tmdb
 
 import (
-	gotmdb "github.com/cyruzin/golang-tmdb"
+	"context"
+
+	"github.com/golusoris/goenvoy/metadata/video/tmdb"
 )
 
 // Client to communicate with tmdb api.
 type Client struct {
-	client *gotmdb.Client
+	client *tmdb.Client
+	ctx    context.Context
 }
