@@ -1,8 +1,9 @@
 package rename
 
 type Flags struct {
-	excludeGlob        string
+	excludeGlob        []string
 	excludeRegex       string
+	includeGlob        []string
 	includeRegex       string
 	force              bool
 	language           string

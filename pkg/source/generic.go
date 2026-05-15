@@ -29,6 +29,7 @@ type generic struct {
 	path         string         // Root path to scan for media files
 	options      Options        // Configuration options for scanning behavior
 	excludes     []string       // List of files or directories to exclude based on glob patterns
+	includes     []string       // List of files or directories to include based on glob patterns
 	excludeRegex *regexp.Regexp // Compiled regex for excluding files or directories
 	includeRegex *regexp.Regexp // Compiled regex for include files or directories
 	titleRegex   *regexp.Regexp // Compiled regex for extracting title from file or directory name
@@ -55,18 +56,32 @@ func (g *generic) scan() ([]Node, error) {
 	}
 	dirInfo := fs.FileInfoToDirEntry(info)
 
-	if g.options.ExcludeGlob != "" {
+	for _, excludeGlob := range g.options.ExcludeGlob {
 		// filepaht.Glob requires a full path to match, so we need to join the exclude glob with the base path.
 		excludePath := g.path
 		if !dirInfo.IsDir() {
 			// In case of a file, we need to use the parent directory as the base path for the glob pattern.
 			excludePath = filepath.Dir(g.path)
 		}
-		excludes, err := filepath.Glob(filepath.Join(excludePath, g.options.ExcludeGlob))
+		excludes, err := filepath.Glob(filepath.Join(excludePath, excludeGlob))
 		if err != nil {
 			return nil, fmt.Errorf("failed to apply exclude pattern: %w", err)
 		}
-		g.excludes = excludes
+		g.excludes = append(g.excludes, excludes...)
+	}
+
+	for _, includeGlob := range g.options.IncludeGlob {
+		// filepaht.Glob requires a full path to match, so we need to join the exclude glob with the base path.
+		includePath := g.path
+		if !dirInfo.IsDir() {
+			// In case of a file, we need to use the parent directory as the base path for the glob pattern.
+			includePath = filepath.Dir(g.path)
+		}
+		includes, err := filepath.Glob(filepath.Join(includePath, includeGlob))
+		if err != nil {
+			return nil, fmt.Errorf("failed to apply exclude pattern: %w", err)
+		}
+		g.includes = append(g.includes, includes...)
 	}
 
 	if g.options.ExcludeRegex != "" {
@@ -124,6 +139,12 @@ func (g *generic) walk(path string, entry fs.DirEntry, depth int, parentResp pro
 	// Skip entries that are excluded by regex patterns.
 	if g.excludeRegex != nil && g.excludeRegex.MatchString(path) {
 		n.Error = fmt.Errorf("%w by regex", ErrExcludedPath)
+		return []Node{n}
+	}
+
+	// Skip entries that are explicitly excluded by glob patterns.
+	if len(g.includes) > 0 && !entry.IsDir() && !slices.Contains(g.includes, path) {
+		n.Error = fmt.Errorf("%w not included by glob", ErrExcludedPath)
 		return []Node{n}
 	}
 
