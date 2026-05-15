@@ -3,7 +3,6 @@ package tmdb
 import (
 	"errors"
 	"strconv"
-	"strings"
 
 	"github.com/golusoris/goenvoy/metadata/video/tmdb"
 	"github.com/rs/zerolog/log"
@@ -86,11 +85,11 @@ func (c *Client) searchTV(req provider.Request) (*tmdb.PaginatedResult[tmdb.TVRe
 }
 
 func buildAdditionalQuery(req provider.Request) string {
-	e := []string{req.Query}
+	q := req.Query
 	if req.Year != 0 {
-		e = append(e, strconv.Itoa(req.Year))
+		q += " " + strconv.Itoa(req.Year)
 	}
-	return strings.Join(e, "&")
+	return q
 }
 
 func buildLanguageQuery(language string) string {
