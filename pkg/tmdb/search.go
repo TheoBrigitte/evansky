@@ -15,7 +15,11 @@ import (
 // see: https://developer.themoviedb.org/reference/search-movie
 func (c *Client) SearchMovie(req provider.Request) (provider.ResponseMovie, float64, error) {
 	movies, err := c.searchMovie(req)
-	if err != nil && errors.Is(err, provider.ErrNoResult) {
+	if err != nil {
+		if !errors.Is(err, provider.ErrNoResult) {
+			return nil, 0, err
+		}
+
 		// Try again without year and language filters
 		req.Year = 0
 		req.QueryLanguage = ""
@@ -48,7 +52,11 @@ func (c *Client) searchMovie(req provider.Request) (*tmdb.PaginatedResult[tmdb.M
 // see: https://developer.themoviedb.org/reference/search-tv
 func (c *Client) SearchTV(req provider.Request) (provider.ResponseTV, float64, error) {
 	tvshows, err := c.searchTV(req)
-	if err != nil && errors.Is(err, provider.ErrNoResult) {
+	if err != nil {
+		if !errors.Is(err, provider.ErrNoResult) {
+			return nil, 0, err
+		}
+
 		// Try again without year and language filters
 		req.Year = 0
 		req.QueryLanguage = ""
