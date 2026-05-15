@@ -9,6 +9,7 @@ import (
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
 	"github.com/TheoBrigitte/evansky/pkg/source"
+	"github.com/TheoBrigitte/evansky/pkg/util"
 )
 
 type movieResponse struct {
@@ -72,7 +73,7 @@ func (r movie) GetDate() time.Time {
 }
 
 func (r movie) GetPopularity() int {
-	return computePopularity(r.result.Popularity, r.result.VoteAverage, r.result.VoteCount)
+	return util.ComputePopularity(r.result.Popularity, r.result.VoteAverage, r.result.VoteCount)
 }
 
 func movieByClosestYear(query string, year int, movies []tmdb.MovieResult) (tmdb.MovieResult, float64) {
@@ -101,7 +102,7 @@ func movieByClosestYear(query string, year int, movies []tmdb.MovieResult) (tmdb
 
 		// Calculate popularity score (lower is better, inverted so higher popularity = lower score)
 		// Normalize popularity to 0-100 range and invert
-		popularity := computePopularity(t.Popularity, t.VoteAverage, t.VoteCount)
+		popularity := util.ComputePopularity(t.Popularity, t.VoteAverage, t.VoteCount)
 		popularityScore := 100.0 - float64(popularity)
 
 		// Combined score: weighted sum where title is primary, year and popularity are secondary (lower is better)

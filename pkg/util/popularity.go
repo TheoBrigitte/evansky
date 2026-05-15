@@ -1,10 +1,10 @@
-package tmdb
+package util
 
 import (
 	"math"
 )
 
-func computePopularity(popularity, voteAverage float64, voteCount int) int {
+func ComputePopularity(popularity, voteAverage float64, voteCount int) int {
 	if voteCount == 0 {
 		return 0
 	}

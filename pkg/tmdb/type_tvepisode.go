@@ -7,6 +7,7 @@ import (
 	"github.com/golusoris/goenvoy/metadata/video/tmdb"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
+	"github.com/TheoBrigitte/evansky/pkg/util"
 )
 
 type tvEpisodeResponse struct {
@@ -74,7 +75,7 @@ func (r tvEpisode) GetDate() time.Time {
 }
 
 func (r tvEpisode) GetPopularity() int {
-	return computePopularity(-1, r.result.VoteAverage, r.result.VoteCount)
+	return util.ComputePopularity(-1, r.result.VoteAverage, r.result.VoteCount)
 }
 
 func (r tvEpisode) GetEpisodeNumber() int {

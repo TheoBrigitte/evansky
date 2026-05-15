@@ -7,6 +7,7 @@ import (
 	"github.com/golusoris/goenvoy/metadata/video/tmdb"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
+	"github.com/TheoBrigitte/evansky/pkg/util"
 )
 
 type tvSeasonResponse struct {
@@ -102,7 +103,7 @@ func (r tvSeason) GetDate() time.Time {
 
 func (r tvSeason) GetPopularity() int {
 	// TODO: fix this since season has no vote counts
-	return computePopularity(-1, r.result.VoteAverage, 1)
+	return util.ComputePopularity(-1, r.result.VoteAverage, 1)
 }
 
 func (r tvSeason) GetShow() provider.ResponseTV {
