@@ -6,6 +6,7 @@ import "time"
 type Response interface {
 	// Commont methods for all media types.
 	GetID() int
+	GetProvider() string
 	GetName() string
 	GetDate() time.Time
 	GetPopularity() int
@@ -48,8 +49,6 @@ type ResponseTVEpisode interface {
 
 	ResponseBaseTVEpisode
 }
-
-//GetMediaType() MediaType
 
 type ResponseBase interface {
 	GetRequest() *Request
