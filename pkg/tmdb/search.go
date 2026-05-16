@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
+	"github.com/TheoBrigitte/evansky/pkg/util"
 )
 
 // SearchMovie search for movies using query and year (if provided).
@@ -28,8 +29,7 @@ func (c *Client) SearchMovie(req provider.Request) (provider.ResponseMovie, floa
 		}
 	}
 
-	result, score := movieByClosestYear(req.Query, req.Year, movies.Results)
-	resp, err := c.newMovieResponse(result, req.QueryLanguage)
+	resp, score := util.BestMatch(req, movies.Results, c.newMovieResponse)
 	return resp, score, err
 }
 
