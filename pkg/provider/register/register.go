@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
-	"github.com/TheoBrigitte/evansky/pkg/tmdb"
+	"github.com/TheoBrigitte/evansky/pkg/provider/tmdb"
 )
 
 var (
