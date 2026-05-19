@@ -14,7 +14,6 @@ type tvSeasonResponse struct {
 	*tvSeason
 	multi  map[string]*tvSeason
 	client *Client
-	provider.ResponseBaseTVSeason
 }
 
 type tvSeason struct {
@@ -23,13 +22,14 @@ type tvSeason struct {
 	show    provider.ResponseTV
 	// Language indexed episodes cache
 	episodes []provider.ResponseTVEpisode
+
+	provider.ResponseBaseTVSeason
 }
 
 func (c *Client) newTVSeasonResponse(result tmdb.SeasonDetails, show provider.ResponseTV, req provider.Request) (*tvSeasonResponse, error) {
 	m := &tvSeasonResponse{
-		multi:                make(map[string]*tvSeason),
-		client:               c,
-		ResponseBaseTVSeason: provider.NewResponseBaseTVSeason(),
+		multi:  make(map[string]*tvSeason),
+		client: c,
 	}
 
 	err := m.init(result, show, req)
@@ -42,9 +42,11 @@ func (c *Client) newTVSeasonResponse(result tmdb.SeasonDetails, show provider.Re
 
 func (m *tvSeasonResponse) init(result tmdb.SeasonDetails, show provider.ResponseTV, req provider.Request) error {
 	m.tvSeason = &tvSeason{
-		result: result,
-		show:   show,
+		result:               result,
+		show:                 show,
+		ResponseBaseTVSeason: provider.NewResponseBaseTVSeason(),
 	}
+	m.SetRequest(req)
 
 	if result.AirDate != "" {
 		// log.Debug().Msgf("parsing tv season air date: %s", result.AirDate)
@@ -77,7 +79,7 @@ func (m *tvSeasonResponse) init(result tmdb.SeasonDetails, show provider.Respons
 		ed.StillPath = e.StillPath
 		ed.VoteAverage = e.VoteAverage
 		ed.VoteCount = e.VoteCount
-		episode, err := m.client.newTVEpisodeResponse(ed, m, req.DestinationLanguage)
+		episode, err := m.client.newTVEpisodeResponse(ed, m, req)
 		if err != nil {
 			return err
 		}
@@ -99,6 +101,10 @@ func (r tvSeason) GetName() string {
 
 func (r tvSeason) GetDate() time.Time {
 	return r.airDate
+}
+
+func (r tvSeason) GetProvider() string {
+	return name
 }
 
 func (r tvSeason) GetPopularity() int {

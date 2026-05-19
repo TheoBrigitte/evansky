@@ -8,7 +8,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/TheoBrigitte/evansky/pkg/provider"
-	"github.com/TheoBrigitte/evansky/pkg/source"
 	"github.com/TheoBrigitte/evansky/pkg/util"
 )
 
@@ -16,8 +15,6 @@ type tvResponse struct {
 	*tv
 	multi  map[string]*tv
 	client *Client
-
-	provider.ResponseBaseTV
 }
 
 type tv struct {
@@ -25,16 +22,17 @@ type tv struct {
 	firstAirDate time.Time
 	// Language indexed seasons cache
 	seasons []provider.ResponseTVSeason
+
+	provider.ResponseBaseTV
 }
 
 func (c *Client) newTVResponse(result tmdb.TVResult, req provider.Request) (*tvResponse, error) {
 	m := &tvResponse{
-		multi:          make(map[string]*tv),
-		client:         c,
-		ResponseBaseTV: provider.NewResponseBaseTV(),
+		multi:  make(map[string]*tv),
+		client: c,
 	}
 
-	err := m.init(result, req)
+	err := m.newTv(result, req)
 	if err != nil {
 		return nil, err
 	}
@@ -42,10 +40,12 @@ func (c *Client) newTVResponse(result tmdb.TVResult, req provider.Request) (*tvR
 	return m, nil
 }
 
-func (m *tvResponse) init(result tmdb.TVResult, req provider.Request) error {
+func (m *tvResponse) newTv(result tmdb.TVResult, req provider.Request) error {
 	m.tv = &tv{
-		result: result,
+		result:         result,
+		ResponseBaseTV: provider.NewResponseBaseTV(),
 	}
+	m.SetRequest(req)
 
 	if result.FirstAirDate != "" {
 		// log.Debug().Msg("parsing tv first air date: " + result.FirstAirDate)
@@ -99,6 +99,10 @@ func (r tv) GetPopularity() int {
 	return util.ComputePopularity(r.result.Popularity, r.result.VoteAverage, r.result.VoteCount)
 }
 
+func (r tv) GetProvider() string {
+	return name
+}
+
 func (r *tv) GetSeasons() []provider.ResponseTVSeason {
 	// slog.Debug("get seasons", "show_id", r.GetID(), "seasons", len(r.seasons))
 	return r.seasons
@@ -114,56 +118,6 @@ func (r tv) GetSeason(seasonNumber int) (provider.ResponseTVSeason, error) {
 	}
 
 	return nil, fmt.Errorf("season %d not found for show %d", seasonNumber, r.GetID())
-}
-
-func tvshowByClosestYear(query string, year int, tvshows []tmdb.TVResult) (tmdb.TVResult, float64) {
-	var bestScore float64 = -1
-	var bestTitleScore float64 = 0
-	var closestMatch tmdb.TVResult
-
-	for index, t := range tvshows {
-		var yearScore float64
-
-		// Only calculate year score if year is provided
-		if year > 0 {
-			date, err := time.Parse(time.DateOnly, t.FirstAirDate)
-			if err != nil {
-				log.Warn().Err(err).Msgf("failed to parse FirstAirDate: %s", t.FirstAirDate)
-				continue
-			}
-			yearScore = computeClosetYearScore(year, date.Year(), index)
-		} else {
-			// When no year is provided, use index as a small tiebreaker
-			yearScore = float64(index)
-		}
-
-		// Calculate title similarity (higher is better, 0-1 range)
-		_, titleScore := source.BetterMatch(query, t.Name, 0)
-
-		// Calculate popularity score (lower is better, inverted so higher popularity = lower score)
-		// Normalize popularity to 0-100 range and invert
-		popularity := util.ComputePopularity(t.Popularity, t.VoteAverage, t.VoteCount)
-		popularityScore := 100.0 - float64(popularity)
-
-		// Combined score: weighted sum where title is primary, year and popularity are secondary (lower is better)
-		// Title mismatch is weighted heavily (1000x) so better title matches almost always win
-		// Year score and popularity score matter for breaking ties
-		combinedScore := (1.0-titleScore)*1000.0 + yearScore + popularityScore
-
-		log.Debug().Msgf("comparing tv show %s tmdbid=%d date=%s yearScore=%f titleScore=%f popularity=%d popularityScore=%f combinedScore=%f",
-			t.Name, t.ID, t.FirstAirDate, yearScore, titleScore, popularity, popularityScore, combinedScore)
-
-		if bestScore == -1 || combinedScore < bestScore {
-			bestScore = combinedScore
-			bestTitleScore = titleScore
-			closestMatch = t
-		}
-	}
-
-	log.Debug().Msgf("best match: %s tmdbid=%d bestScore=%f bestTitleScore=%f",
-		closestMatch.Name, closestMatch.ID, bestScore, bestTitleScore)
-
-	return closestMatch, bestScore
 }
 
 func (m *tvResponse) InLanguage(req provider.Request) (provider.Response, error) {
@@ -191,7 +145,7 @@ func (m *tvResponse) InLanguage(req provider.Request) (provider.Response, error)
 			VoteCount:        details.VoteCount,
 		}
 
-		err = m.init(result, req)
+		err = m.newTv(result, req)
 		if err != nil {
 			return nil, err
 		}

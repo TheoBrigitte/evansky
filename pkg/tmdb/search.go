@@ -65,8 +65,7 @@ func (c *Client) SearchTV(req provider.Request) (provider.ResponseTV, float64, e
 		}
 	}
 
-	result, score := tvshowByClosestYear(req.Query, req.Year, tvshows.Results)
-	resp, err := c.newTVResponse(result, req)
+	resp, score := util.BestMatch(req, tvshows.Results, c.newTVResponse)
 	return resp, score, err
 }
 

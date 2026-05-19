@@ -15,40 +15,41 @@ type tvEpisodeResponse struct {
 	multi  map[string]*tvEpisode
 	client *tmdb.Client
 	ctx    context.Context
-
-	provider.ResponseBaseTVEpisode
 }
 
 type tvEpisode struct {
 	result  tmdb.EpisodeDetails
 	airDate time.Time
 	season  provider.ResponseTVSeason
+
+	provider.ResponseBaseTVEpisode
 }
 
-func (c *Client) newTVEpisodeResponse(result tmdb.EpisodeDetails, season provider.ResponseTVSeason, lang string) (*tvEpisodeResponse, error) {
-	t, err := newTVEpisode(result, season)
+func (c *Client) newTVEpisodeResponse(result tmdb.EpisodeDetails, season provider.ResponseTVSeason, req provider.Request) (*tvEpisodeResponse, error) {
+	t, err := newTVEpisode(result, season, req)
 	if err != nil {
 		return nil, err
 	}
 
 	m := &tvEpisodeResponse{
-		tvEpisode:             t,
-		client:                c.client,
-		ctx:                   c.ctx,
-		ResponseBaseTVEpisode: provider.NewResponseBaseTVEpisode(),
+		tvEpisode: t,
+		client:    c.client,
+		ctx:       c.ctx,
 	}
 	m.multi = map[string]*tvEpisode{
-		lang: m.tvEpisode,
+		req.DestinationLanguage: m.tvEpisode,
 	}
 
 	return m, nil
 }
 
-func newTVEpisode(result tmdb.EpisodeDetails, season provider.ResponseTVSeason) (t *tvEpisode, err error) {
+func newTVEpisode(result tmdb.EpisodeDetails, season provider.ResponseTVSeason, req provider.Request) (t *tvEpisode, err error) {
 	t = &tvEpisode{
-		result: result,
-		season: season,
+		result:                result,
+		season:                season,
+		ResponseBaseTVEpisode: provider.NewResponseBaseTVEpisode(),
 	}
+	t.SetRequest(req)
 
 	if result.AirDate != "" {
 		// log.Debug().Msgf("parsing tv episode air date: %s", result.AirDate)
@@ -86,6 +87,10 @@ func (r tvEpisode) GetSeason() provider.ResponseTVSeason {
 	return r.season
 }
 
+func (r tvEpisode) GetProvider() string {
+	return name
+}
+
 func (m *tvEpisodeResponse) InLanguage(req provider.Request) (provider.Response, error) {
 	if r, ok := m.multi[req.DestinationLanguage]; ok {
 		m.tvEpisode = r
@@ -96,7 +101,7 @@ func (m *tvEpisodeResponse) InLanguage(req provider.Request) (provider.Response,
 			return nil, err
 		}
 
-		e, err := newTVEpisode(*details, m.GetSeason())
+		e, err := newTVEpisode(*details, m.GetSeason(), req)
 		if err != nil {
 			return nil, err
 		}
