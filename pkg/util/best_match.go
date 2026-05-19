@@ -45,8 +45,8 @@ func BestMatch[E any, R provider.Response](req provider.Request, elements []E, n
 		// Year score and popularity score matter for breaking ties
 		combinedScore := (1.0-titleScore)*1000.0 + yearScore + popularityScore
 
-		log.Debug().Msgf("comparing movie title=%s provider=%s providerId=%d date=%s yearScore=%f titleScore=%f popularity=%d popularityScore=%f combinedScore=%f",
-			e.GetName(), e.GetProvider(), e.GetID(), e.GetDate(), yearScore, titleScore, popularity, popularityScore, combinedScore)
+		log.Debug().Msgf("comparing %T title=%s provider=%s providerId=%d date=%s yearScore=%f titleScore=%f popularity=%d popularityScore=%f combinedScore=%f",
+			t, e.GetName(), e.GetProvider(), e.GetID(), e.GetDate(), yearScore, titleScore, popularity, popularityScore, combinedScore)
 
 		if bestScore == -1 || combinedScore < bestScore {
 			bestScore = combinedScore
